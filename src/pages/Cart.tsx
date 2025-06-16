@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,28 @@ import { useNavigate } from 'react-router-dom';
 const Cart = () => {
   const { cartItems, removeFromCart, updateQuantity, getTotalPrice } = useCart();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const speak = (text: string) => {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-IN';
+        utterance.rate = 0.8;
+        utterance.pitch = 1.1;
+        window.speechSynthesis.speak(utterance);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      if (cartItems.length > 0) {
+        speak(`Your shopping cart. You have ${cartItems.length} items worth ${getTotalPrice().toFixed(2)} dollars. Review your items and proceed to voice checkout when ready.`);
+      } else {
+        speak("Your shopping cart is empty. Browse our products to add items and experience India's most accessible checkout process.");
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [cartItems.length]);
 
   if (cartItems.length === 0) {
     return (

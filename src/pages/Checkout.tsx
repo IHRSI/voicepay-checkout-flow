@@ -25,6 +25,12 @@ const Checkout = () => {
     otp: '',
     voiceConfirmed: false
   });
+  const [paymentDetails, setPaymentDetails] = useState({
+    upiAddress: '',
+    cardHolderName: '',
+    cardNumber: '',
+    cvv: ''
+  });
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
@@ -44,21 +50,39 @@ const Checkout = () => {
     }
   });
 
+  // Voice introduction for checkout page
+  useEffect(() => {
+    const speak = (text: string) => {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-IN';
+        utterance.rate = 0.8;
+        utterance.pitch = 1.1;
+        window.speechSynthesis.speak(utterance);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      speak("Welcome to VoicePay checkout. India's most accessible payment experience. I will guide you through four simple steps using your voice. Let's complete your order together!");
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   // Auto-start voice checkout when component mounts
   useEffect(() => {
     if (!hasStarted && voiceMode && cartItems.length > 0) {
       setHasStarted(true);
-      startVoiceCheckout();
+      setTimeout(() => startVoiceCheckout(), 2000);
     }
   }, [hasStarted, voiceMode, cartItems.length]);
 
   const startVoiceCheckout = async () => {
-    // Step 0: Product Overview with Indian accent
     const productSummary = cartItems.map((item, index) => 
       `${index + 1}. ${item.title}, quantity ${item.quantity}, price ${(item.price * item.quantity).toFixed(2)} dollars`
     ).join('. ');
     
-    await speak(`Namaste! Welcome to VoicePay, India's most inclusive payment platform. Let me tell you about your order. You have ${cartItems.length} items. ${productSummary}. Your total amount is ${getTotalPrice().toFixed(2)} dollars. Now I'll guide you through our simple 3-step checkout process. Are you ready to proceed?`);
+    await speak(`Namaste! Let me tell you about your order. You have ${cartItems.length} items. ${productSummary}. Your total amount is ${getTotalPrice().toFixed(2)} dollars. Now I'll guide you through our simple 4-step checkout process. Are you ready to proceed? Say yes to continue.`);
     
     setTimeout(() => {
       setIsProcessing(true);
@@ -68,18 +92,24 @@ const Checkout = () => {
 
   const handleVoiceInput = async (transcript: string) => {
     const lowerTranscript = transcript.toLowerCase().trim();
-    console.log('Voice input received:', transcript);
+    console.log('Voice input received:', transcript, 'Current step:', currentStep);
     
     // Handle special commands
     if (lowerTranscript.includes('repeat') || lowerTranscript.includes('say again')) {
       await speakStepInstructions(currentStep);
-      setTimeout(() => listen(), 1000);
+      setTimeout(() => {
+        setIsProcessing(true);
+        listen();
+      }, 1000);
       return;
     }
     
     if (lowerTranscript.includes('help')) {
       await speak("You can say 'repeat' to hear instructions again, 'manual mode' to switch to typing, or simply follow the prompts for each step.");
-      setTimeout(() => listen(), 1000);
+      setTimeout(() => {
+        setIsProcessing(true);
+        listen();
+      }, 1000);
       return;
     }
     
@@ -105,7 +135,7 @@ const Checkout = () => {
         await handlePaymentMethodInput(lowerTranscript);
         break;
       case 4:
-        await handleVerificationInput(lowerTranscript, transcript);
+        await handlePaymentDetailsInput(lowerTranscript, transcript);
         break;
     }
   };
@@ -113,14 +143,17 @@ const Checkout = () => {
   const handleReadyConfirmation = async (lowerTranscript: string) => {
     if (lowerTranscript.includes('yes') || lowerTranscript.includes('ready') || lowerTranscript.includes('proceed')) {
       setCurrentStep(2);
-      await speak("Excellent! Let's start with step 1: Please tell me your complete delivery address including street, city, and postal code.");
+      await speak("Excellent! Step 1: Please tell me your complete delivery address including street, city, and postal code.");
       setTimeout(() => {
         setIsProcessing(true);
         listen();
       }, 2000);
     } else {
       await speak("Take your time. Say 'yes' or 'ready' when you want to proceed with the checkout.");
-      setTimeout(() => listen(), 1000);
+      setTimeout(() => {
+        setIsProcessing(true);
+        listen();
+      }, 1000);
     }
   };
 
@@ -128,7 +161,10 @@ const Checkout = () => {
     setCheckoutData(prev => ({ ...prev, address: transcript }));
     await speak(`I heard your address as: ${transcript}. Is this correct? Say yes to confirm or no to try again.`);
     setAwaitingConfirmation(true);
-    setTimeout(() => listen(), 1000);
+    setTimeout(() => {
+      setIsProcessing(true);
+      listen();
+    }, 1000);
   };
 
   const handlePaymentMethodInput = async (lowerTranscript: string) => {
@@ -146,33 +182,105 @@ const Checkout = () => {
       setCheckoutData(prev => ({ ...prev, paymentMethod }));
       await speak(`You selected ${paymentMethod}. Is this correct? Say yes to confirm or no to try again.`);
       setAwaitingConfirmation(true);
-      setTimeout(() => listen(), 1000);
+      setTimeout(() => {
+        setIsProcessing(true);
+        listen();
+      }, 1000);
     } else {
       await speak("I didn't understand. Please say UPI, Card, or Cash on Delivery clearly.");
-      setTimeout(() => listen(), 1000);
+      setTimeout(() => {
+        setIsProcessing(true);
+        listen();
+      }, 1000);
     }
   };
 
-  const handleVerificationInput = async (lowerTranscript: string, transcript: string) => {
+  const handlePaymentDetailsInput = async (lowerTranscript: string, transcript: string) => {
+    if (checkoutData.paymentMethod === 'Cash on Delivery') {
+      await speak("Perfect! Your order will be delivered with cash on delivery option. Processing your order now. Dhanyawad!");
+      setTimeout(() => handlePaymentSuccess(), 2000);
+      return;
+    }
+
     if (checkoutData.paymentMethod === 'UPI') {
-      const otp = transcript.replace(/\D/g, '');
-      if (otp.length >= 4) {
-        setCheckoutData(prev => ({ ...prev, otp }));
-        await speak(`You said OTP ${otp.split('').join(' ')}. Is this correct? Say yes to proceed or no to try again.`);
+      if (!paymentDetails.upiAddress) {
+        // Ask for UPI address
+        setPaymentDetails(prev => ({ ...prev, upiAddress: transcript }));
+        await speak(`I heard your UPI address as: ${transcript}. Is this correct? Say yes to confirm or no to try again.`);
         setAwaitingConfirmation(true);
-        setTimeout(() => listen(), 1000);
-      } else {
-        await speak("Please say your OTP clearly. I need at least 4 digits.");
-        setTimeout(() => listen(), 1000);
+        setTimeout(() => {
+          setIsProcessing(true);
+          listen();
+        }, 1000);
+      } else if (!checkoutData.otp) {
+        // Ask for OTP
+        const otp = transcript.replace(/\D/g, '');
+        if (otp.length >= 4) {
+          setCheckoutData(prev => ({ ...prev, otp }));
+          await speak(`You said OTP ${otp.split('').join(' ')}. Processing your UPI payment now. Please wait.`);
+          setTimeout(() => handlePaymentSuccess(), 2000);
+        } else {
+          await speak("Please say your OTP clearly. I need at least 4 digits.");
+          setTimeout(() => {
+            setIsProcessing(true);
+            listen();
+          }, 1000);
+        }
       }
-    } else {
-      if (lowerTranscript.includes('confirm voicepay') || lowerTranscript.includes('confirm voice pay')) {
-        setCheckoutData(prev => ({ ...prev, voiceConfirmed: true }));
-        await speak("Voice verification successful! Processing your payment now. Dhanyawad!");
-        setTimeout(() => handlePaymentSuccess(), 2000);
-      } else {
-        await speak("For security, please say exactly 'Confirm VoicePay' to complete your order.");
-        setTimeout(() => listen(), 1000);
+    } else if (checkoutData.paymentMethod === 'Card') {
+      if (!paymentDetails.cardHolderName) {
+        setPaymentDetails(prev => ({ ...prev, cardHolderName: transcript }));
+        await speak(`Card holder name: ${transcript}. Is this correct? Say yes to confirm or no to try again.`);
+        setAwaitingConfirmation(true);
+        setTimeout(() => {
+          setIsProcessing(true);
+          listen();
+        }, 1000);
+      } else if (!paymentDetails.cardNumber) {
+        const cardNumber = transcript.replace(/\D/g, '');
+        if (cardNumber.length >= 16) {
+          setPaymentDetails(prev => ({ ...prev, cardNumber }));
+          await speak(`Card number captured. Now please tell me the CVV.`);
+          setTimeout(() => {
+            setIsProcessing(true);
+            listen();
+          }, 1000);
+        } else {
+          await speak("Please say your complete 16-digit card number clearly.");
+          setTimeout(() => {
+            setIsProcessing(true);
+            listen();
+          }, 1000);
+        }
+      } else if (!paymentDetails.cvv) {
+        const cvv = transcript.replace(/\D/g, '');
+        if (cvv.length >= 3) {
+          setPaymentDetails(prev => ({ ...prev, cvv }));
+          await speak(`CVV captured. Now please tell me the OTP sent to your registered mobile number.`);
+          setTimeout(() => {
+            setIsProcessing(true);
+            listen();
+          }, 1000);
+        } else {
+          await speak("Please say your 3 or 4 digit CVV clearly.");
+          setTimeout(() => {
+            setIsProcessing(true);
+            listen();
+          }, 1000);
+        }
+      } else if (!checkoutData.otp) {
+        const otp = transcript.replace(/\D/g, '');
+        if (otp.length >= 4) {
+          setCheckoutData(prev => ({ ...prev, otp }));
+          await speak(`OTP captured. Processing your card payment now. Please wait.`);
+          setTimeout(() => handlePaymentSuccess(), 2000);
+        } else {
+          await speak("Please say your OTP clearly. I need at least 4 digits.");
+          setTimeout(() => {
+            setIsProcessing(true);
+            listen();
+          }, 1000);
+        }
       }
     }
   };
@@ -185,37 +293,58 @@ const Checkout = () => {
         setCurrentStep(currentStep + 1);
         await progressToNextStep(currentStep + 1);
       } else {
-        if (checkoutData.paymentMethod === 'UPI') {
-          await speak("Perfect! Processing your UPI payment now. Please wait.");
+        // Continue with current step processing based on payment method
+        if (checkoutData.paymentMethod === 'UPI' && !paymentDetails.upiAddress) {
+          await speak("Great! Now please tell me your UPI address or UPI ID.");
+        } else if (checkoutData.paymentMethod === 'Card' && !paymentDetails.cardHolderName) {
+          await speak("Perfect! Now please tell me the card holder's full name.");
+        } else if (checkoutData.paymentMethod === 'Cash on Delivery') {
+          await speak("Excellent! Your order will be delivered with cash on delivery. Processing now.");
           setTimeout(() => handlePaymentSuccess(), 2000);
-        } else {
-          await speak("Excellent! Your order is being processed. Thank you for using VoicePay!");
-          setTimeout(() => handlePaymentSuccess(), 2000);
+          return;
         }
+        setTimeout(() => {
+          setIsProcessing(true);
+          listen();
+        }, 1000);
       }
     } else if (lowerTranscript.includes('no') || lowerTranscript.includes('nope') || lowerTranscript.includes('wrong')) {
       await speak("No problem, let's try again.");
       await speakStepInstructions(currentStep);
-      setTimeout(() => listen(), 1000);
+      setTimeout(() => {
+        setIsProcessing(true);
+        listen();
+      }, 1000);
     } else {
       await speak("Please say yes to confirm or no to try again.");
-      setTimeout(() => listen(), 1000);
+      setTimeout(() => {
+        setIsProcessing(true);
+        listen();
+      }, 1000);
     }
   };
 
   const progressToNextStep = async (step: number) => {
     switch (step) {
       case 3:
-        await speak("Great! Now for step 2: Please tell me your payment method. Say UPI, Card, or Cash on Delivery.");
-        setTimeout(() => listen(), 2000);
+        await speak("Great! Step 2: Please tell me your payment method. Say UPI, Card, or Cash on Delivery.");
+        setTimeout(() => {
+          setIsProcessing(true);
+          listen();
+        }, 2000);
         break;
       case 4:
         if (checkoutData.paymentMethod === 'UPI') {
-          await speak("Final step! Please tell me your UPI OTP for payment verification.");
+          await speak("Step 3: Final step! Please tell me your UPI address or UPI ID for payment.");
+        } else if (checkoutData.paymentMethod === 'Card') {
+          await speak("Step 3: Final step! Please tell me the card holder's full name.");
         } else {
-          await speak("Final step! For voice verification, please say exactly 'Confirm VoicePay' to complete your order.");
+          await speak("Step 3: Final step! Your order will be delivered with cash on delivery option.");
         }
-        setTimeout(() => listen(), 2000);
+        setTimeout(() => {
+          setIsProcessing(true);
+          listen();
+        }, 2000);
         break;
     }
   };
@@ -233,9 +362,23 @@ const Checkout = () => {
         break;
       case 4:
         if (checkoutData.paymentMethod === 'UPI') {
-          await speak("Please tell me your OTP for UPI payment verification.");
+          if (!paymentDetails.upiAddress) {
+            await speak("Please tell me your UPI address or UPI ID.");
+          } else {
+            await speak("Please tell me the OTP sent to your mobile for UPI verification.");
+          }
+        } else if (checkoutData.paymentMethod === 'Card') {
+          if (!paymentDetails.cardHolderName) {
+            await speak("Please tell me the card holder's full name.");
+          } else if (!paymentDetails.cardNumber) {
+            await speak("Please tell me your 16-digit card number.");
+          } else if (!paymentDetails.cvv) {
+            await speak("Please tell me the CVV from the back of your card.");
+          } else {
+            await speak("Please tell me the OTP sent to your registered mobile number.");
+          }
         } else {
-          await speak("For voice verification security, please say exactly 'Confirm VoicePay'.");
+          await speak("Your order will be delivered with cash on delivery option.");
         }
         break;
     }
@@ -245,7 +388,7 @@ const Checkout = () => {
     clearCart();
     navigate('/success', { 
       state: { 
-        orderData: checkoutData,
+        orderData: { ...checkoutData, ...paymentDetails },
         total: getTotalPrice(),
         items: cartItems
       }
@@ -314,7 +457,7 @@ const Checkout = () => {
               />
             )}
 
-            {/* Step 4: Verification */}
+            {/* Step 4: Payment Details & Verification */}
             {currentStep === 4 && (
               <VerificationStep
                 paymentMethod={checkoutData.paymentMethod}
@@ -323,6 +466,8 @@ const Checkout = () => {
                 voiceMode={voiceMode}
                 isListening={isListening}
                 isProcessing={isProcessing}
+                paymentDetails={paymentDetails}
+                onPaymentDetailsChange={setPaymentDetails}
                 onOtpChange={(otp) => setCheckoutData(prev => ({ ...prev, otp }))}
                 onVoiceConfirm={() => setCheckoutData(prev => ({ ...prev, voiceConfirmed: true }))}
                 onCompleteOrder={handlePaymentSuccess}

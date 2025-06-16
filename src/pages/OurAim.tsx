@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Users, Globe, ArrowRight } from 'lucide-react';
+import { Heart, Users, Globe, ArrowRight, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -26,7 +26,6 @@ const OurAim = () => {
   }, []);
 
   useEffect(() => {
-    // Simulate Indian voice greeting
     const speak = (text: string) => {
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(text);
@@ -38,7 +37,7 @@ const OurAim = () => {
     };
 
     const timer = setTimeout(() => {
-      speak("Welcome to VoicePay. India's most inclusive payment platform. Namaste!");
+      speak("Welcome to VoicePay. India's most inclusive payment platform. Namaste! Discover our mission to make financial services accessible to everyone, regardless of their abilities or background.");
     }, 1000);
 
     return () => clearTimeout(timer);
@@ -77,8 +76,28 @@ const OurAim = () => {
         </div>
       </section>
 
-      {/* Statistics Section */}
+      {/* Our Mission */}
       <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Target className="h-8 w-8 text-orange-600" />
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-8">Our Mission</h2>
+            <p className="text-xl md:text-2xl text-gray-600 leading-relaxed mb-8">
+              We believe that financial services should be accessible to everyone, regardless of their physical abilities or digital literacy. VoicePay is our commitment to building a more inclusive financial future for India.
+            </p>
+            <div className="bg-gradient-to-r from-orange-50 to-blue-50 p-8 rounded-2xl border border-orange-200">
+              <p className="text-lg text-gray-700 italic">
+                "Technology should empower everyone, not exclude anyone. We're not just building a payment platform—we're creating a movement towards digital equality."
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Statistics Section */}
+      <section className="py-16 bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             <Card className="text-center p-8 hover:shadow-lg transition-shadow border-orange-200">
@@ -114,11 +133,11 @@ const OurAim = () => {
         </div>
       </section>
 
-      {/* Mission Section */}
+      {/* Vision Section */}
       <section className="py-16 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-4xl md:text-5xl font-bold mb-8">Our Mission</h2>
+            <h2 className="text-4xl md:text-5xl font-bold mb-8">Our Vision</h2>
             <p className="text-xl md:text-2xl leading-relaxed mb-8">
               To create a world where every person, regardless of their abilities, 
               has equal access to digital commerce and financial services. 
