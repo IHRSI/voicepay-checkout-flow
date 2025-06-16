@@ -1,16 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, CreditCard, Shield, CheckCircle, Mic, MicOff, Volume2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useVoice } from '@/hooks/useVoice';
 import { CheckoutData } from '@/types/product';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
+import OrderSummary from '@/components/checkout/OrderSummary';
+import ProductOverview from '@/components/checkout/ProductOverview';
+import AddressStep from '@/components/checkout/AddressStep';
+import PaymentMethodStep from '@/components/checkout/PaymentMethodStep';
+import VerificationStep from '@/components/checkout/VerificationStep';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -29,7 +29,6 @@ const Checkout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
 
-  // Voice functionality
   const { isListening, speak, listen } = useVoice({
     onResult: (transcript) => handleVoiceInput(transcript),
     onError: (error) => {
@@ -54,11 +53,17 @@ const Checkout = () => {
   }, [hasStarted, voiceMode, cartItems.length]);
 
   const startVoiceCheckout = async () => {
-    await speak("Welcome to VoicePay checkout! I'll guide you through three simple steps. First, please tell me your complete delivery address including street, city, and postal code.");
+    // Step 0: Product Overview with Indian accent
+    const productSummary = cartItems.map((item, index) => 
+      `${index + 1}. ${item.title}, quantity ${item.quantity}, price ${(item.price * item.quantity).toFixed(2)} dollars`
+    ).join('. ');
+    
+    await speak(`Namaste! Welcome to VoicePay, India's most inclusive payment platform. Let me tell you about your order. You have ${cartItems.length} items. ${productSummary}. Your total amount is ${getTotalPrice().toFixed(2)} dollars. Now I'll guide you through our simple 3-step checkout process. Are you ready to proceed?`);
+    
     setTimeout(() => {
       setIsProcessing(true);
       listen();
-    }, 2000);
+    }, 3000);
   };
 
   const handleVoiceInput = async (transcript: string) => {
@@ -91,14 +96,31 @@ const Checkout = () => {
 
     switch (currentStep) {
       case 1:
-        await handleAddressInput(transcript);
+        await handleReadyConfirmation(lowerTranscript);
         break;
       case 2:
-        await handlePaymentMethodInput(lowerTranscript);
+        await handleAddressInput(transcript);
         break;
       case 3:
+        await handlePaymentMethodInput(lowerTranscript);
+        break;
+      case 4:
         await handleVerificationInput(lowerTranscript, transcript);
         break;
+    }
+  };
+
+  const handleReadyConfirmation = async (lowerTranscript: string) => {
+    if (lowerTranscript.includes('yes') || lowerTranscript.includes('ready') || lowerTranscript.includes('proceed')) {
+      setCurrentStep(2);
+      await speak("Excellent! Let's start with step 1: Please tell me your complete delivery address including street, city, and postal code.");
+      setTimeout(() => {
+        setIsProcessing(true);
+        listen();
+      }, 2000);
+    } else {
+      await speak("Take your time. Say 'yes' or 'ready' when you want to proceed with the checkout.");
+      setTimeout(() => listen(), 1000);
     }
   };
 
@@ -146,7 +168,7 @@ const Checkout = () => {
     } else {
       if (lowerTranscript.includes('confirm voicepay') || lowerTranscript.includes('confirm voice pay')) {
         setCheckoutData(prev => ({ ...prev, voiceConfirmed: true }));
-        await speak("Voice verification successful! Processing your payment now.");
+        await speak("Voice verification successful! Processing your payment now. Dhanyawad!");
         setTimeout(() => handlePaymentSuccess(), 2000);
       } else {
         await speak("For security, please say exactly 'Confirm VoicePay' to complete your order.");
@@ -159,15 +181,15 @@ const Checkout = () => {
     setAwaitingConfirmation(false);
     
     if (lowerTranscript.includes('yes') || lowerTranscript.includes('yeah') || lowerTranscript.includes('correct') || lowerTranscript.includes('confirm')) {
-      if (currentStep < 3) {
+      if (currentStep < 4) {
         setCurrentStep(currentStep + 1);
         await progressToNextStep(currentStep + 1);
       } else {
         if (checkoutData.paymentMethod === 'UPI') {
-          await speak("Perfect! Processing your UPI payment now.");
+          await speak("Perfect! Processing your UPI payment now. Please wait.");
           setTimeout(() => handlePaymentSuccess(), 2000);
         } else {
-          await speak("Excellent! Your order is being processed.");
+          await speak("Excellent! Your order is being processed. Thank you for using VoicePay!");
           setTimeout(() => handlePaymentSuccess(), 2000);
         }
       }
@@ -183,11 +205,11 @@ const Checkout = () => {
 
   const progressToNextStep = async (step: number) => {
     switch (step) {
-      case 2:
+      case 3:
         await speak("Great! Now for step 2: Please tell me your payment method. Say UPI, Card, or Cash on Delivery.");
         setTimeout(() => listen(), 2000);
         break;
-      case 3:
+      case 4:
         if (checkoutData.paymentMethod === 'UPI') {
           await speak("Final step! Please tell me your UPI OTP for payment verification.");
         } else {
@@ -201,12 +223,15 @@ const Checkout = () => {
   const speakStepInstructions = async (step: number) => {
     switch (step) {
       case 1:
-        await speak("Please speak your complete delivery address including street, city, and postal code.");
+        await speak("Say 'yes' or 'ready' to proceed with checkout.");
         break;
       case 2:
-        await speak("Please say your payment method: UPI, Card, or Cash on Delivery.");
+        await speak("Please speak your complete delivery address including street, city, and postal code.");
         break;
       case 3:
+        await speak("Please say your payment method: UPI, Card, or Cash on Delivery.");
+        break;
+      case 4:
         if (checkoutData.paymentMethod === 'UPI') {
           await speak("Please tell me your OTP for UPI payment verification.");
         } else {
@@ -232,7 +257,7 @@ const Checkout = () => {
     speak("Switched to manual mode. You can now type your information.");
   };
 
-  const progressValue = (currentStep / 3) * 100;
+  const progressValue = (currentStep / 4) * 100;
 
   if (cartItems.length === 0) {
     navigate('/cart');
@@ -240,268 +265,78 @@ const Checkout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 py-8">
+      <div className="container mx-auto px-4 max-w-6xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">
-            {voiceMode ? '🎙️ Voice Checkout' : 'Manual Checkout'}
+          <h1 className="text-4xl font-bold text-gray-800 mb-4 text-center">
+            {voiceMode ? '🎙️ Voice Checkout' : 'Checkout'}
           </h1>
-          <Progress value={progressValue} className="h-3" />
-          <p className="text-sm text-gray-600 mt-2">Step {currentStep} of 3</p>
-          
-          {voiceMode && (
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-              <div className="flex items-center gap-2 mb-2">
-                {isListening ? (
-                  <>
-                    <MicOff className="h-5 w-5 text-red-500 animate-pulse" />
-                    <span className="text-blue-800 font-medium">Listening...</span>
-                  </>
-                ) : isProcessing ? (
-                  <>
-                    <Volume2 className="h-5 w-5 text-orange-500" />
-                    <span className="text-blue-800 font-medium">Speaking...</span>
-                  </>
-                ) : (
-                  <>
-                    <Mic className="h-5 w-5 text-blue-500" />
-                    <span className="text-blue-800 font-medium">Voice Mode Active</span>
-                  </>
-                )}
-              </div>
-              <p className="text-sm text-blue-700">
-                Say "repeat" to hear instructions again, "help" for commands, or "manual mode" to switch to typing.
-              </p>
-            </div>
-          )}
+          <Progress value={progressValue} className="h-3 bg-gray-200" />
+          <p className="text-sm text-gray-600 mt-2 text-center">Step {currentStep} of 4</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            {/* Step 1: Delivery Address */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Step 1: Product Overview */}
             {currentStep === 1 && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-6 w-6 text-orange-500" />
-                    Delivery Address
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {voiceMode ? (
-                    <div className="space-y-4">
-                      <div className="bg-green-50 p-4 rounded-lg">
-                        <p className="text-green-800 font-medium">🎙️ Voice input active</p>
-                        <p className="text-sm text-green-700 mt-1">
-                          Speak your complete delivery address now
-                        </p>
-                      </div>
-                      {checkoutData.address && (
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <Label className="text-sm text-gray-600">Captured Address:</Label>
-                          <p className="font-medium">{checkoutData.address}</p>
-                        </div>
-                      )}
-                      <Button
-                        onClick={switchToManualMode}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        Switch to Manual Typing
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <Label htmlFor="address">Delivery Address</Label>
-                      <Input
-                        id="address"
-                        value={checkoutData.address}
-                        onChange={(e) => setCheckoutData(prev => ({ ...prev, address: e.target.value }))}
-                        placeholder="Enter your complete delivery address"
-                      />
-                      {checkoutData.address && (
-                        <Button 
-                          onClick={() => setCurrentStep(2)}
-                          className="w-full bg-orange-500 hover:bg-orange-600"
-                        >
-                          Continue to Payment Method
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <ProductOverview
+                cartItems={cartItems}
+                getTotalPrice={getTotalPrice}
+                voiceMode={voiceMode}
+                isListening={isListening}
+                isProcessing={isProcessing}
+                onSwitchToManual={switchToManualMode}
+              />
             )}
 
-            {/* Step 2: Payment Method */}
+            {/* Step 2: Address */}
             {currentStep === 2 && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-6 w-6 text-orange-500" />
-                    Payment Method
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {voiceMode ? (
-                    <div className="space-y-4">
-                      <div className="bg-green-50 p-4 rounded-lg">
-                        <p className="text-green-800 font-medium">🎙️ Voice input active</p>
-                        <p className="text-sm text-green-700 mt-1">
-                          Say "UPI", "Card", or "Cash on Delivery"
-                        </p>
-                      </div>
-                      {checkoutData.paymentMethod && (
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <Label className="text-sm text-gray-600">Selected Method:</Label>
-                          <p className="font-medium">{checkoutData.paymentMethod}</p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-3">
-                      {['UPI', 'Card', 'Cash on Delivery'].map((method) => (
-                        <Button
-                          key={method}
-                          variant={checkoutData.paymentMethod === method ? 'default' : 'outline'}
-                          onClick={() => setCheckoutData(prev => ({ ...prev, paymentMethod: method as any }))}
-                          className={`justify-start p-4 h-auto ${
-                            checkoutData.paymentMethod === method 
-                              ? 'bg-orange-500 hover:bg-orange-600' 
-                              : 'hover:bg-orange-50'
-                          }`}
-                        >
-                          {method}
-                        </Button>
-                      ))}
-                      {checkoutData.paymentMethod && (
-                        <Button 
-                          onClick={() => setCurrentStep(3)}
-                          className="w-full bg-orange-500 hover:bg-orange-600"
-                        >
-                          Continue to Verification
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <AddressStep
+                address={checkoutData.address}
+                voiceMode={voiceMode}
+                isListening={isListening}
+                isProcessing={isProcessing}
+                onAddressChange={(address) => setCheckoutData(prev => ({ ...prev, address }))}
+                onContinue={() => setCurrentStep(3)}
+                onSwitchToManual={switchToManualMode}
+              />
             )}
 
-            {/* Step 3: Verification */}
+            {/* Step 3: Payment Method */}
             {currentStep === 3 && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-6 w-6 text-orange-500" />
-                    {checkoutData.paymentMethod === 'UPI' ? 'OTP Verification' : 'Voice Verification'}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {voiceMode ? (
-                    <div className="space-y-4">
-                      <div className="bg-green-50 p-4 rounded-lg">
-                        <p className="text-green-800 font-medium">🎙️ Voice input active</p>
-                        <p className="text-sm text-green-700 mt-1">
-                          {checkoutData.paymentMethod === 'UPI' 
-                            ? 'Speak your OTP numbers clearly'
-                            : 'Say "Confirm VoicePay" for verification'
-                          }
-                        </p>
-                      </div>
-                      {checkoutData.paymentMethod === 'UPI' && checkoutData.otp && (
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <Label className="text-sm text-gray-600">Captured OTP:</Label>
-                          <p className="font-medium font-mono">{checkoutData.otp}</p>
-                        </div>
-                      )}
-                      {checkoutData.voiceConfirmed && (
-                        <div className="flex items-center gap-2 text-green-600 p-4 bg-green-50 rounded-lg">
-                          <CheckCircle className="h-5 w-5" />
-                          <span className="font-medium">Voice verification successful!</span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {checkoutData.paymentMethod === 'UPI' ? (
-                        <div>
-                          <Label htmlFor="otp">Enter OTP</Label>
-                          <Input
-                            id="otp"
-                            value={checkoutData.otp}
-                            onChange={(e) => setCheckoutData(prev => ({ ...prev, otp: e.target.value }))}
-                            placeholder="Enter your OTP"
-                            className="mt-1"
-                          />
-                        </div>
-                      ) : (
-                        <div className="p-4 bg-blue-50 rounded-lg">
-                          <p className="text-sm text-blue-800">
-                            Click the button below to complete voice verification
-                          </p>
-                          <Button
-                            onClick={() => setCheckoutData(prev => ({ ...prev, voiceConfirmed: true }))}
-                            className="mt-3 bg-green-500 hover:bg-green-600"
-                          >
-                            Complete Voice Verification
-                          </Button>
-                        </div>
-                      )}
-                      
-                      {((checkoutData.paymentMethod === 'UPI' && checkoutData.otp) || 
-                        (checkoutData.paymentMethod !== 'UPI' && checkoutData.voiceConfirmed)) && (
-                        <Button 
-                          onClick={handlePaymentSuccess}
-                          className="w-full bg-green-500 hover:bg-green-600"
-                        >
-                          Complete Order
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <PaymentMethodStep
+                paymentMethod={checkoutData.paymentMethod}
+                voiceMode={voiceMode}
+                isListening={isListening}
+                isProcessing={isProcessing}
+                onPaymentMethodChange={(method) => setCheckoutData(prev => ({ ...prev, paymentMethod: method as any }))}
+                onContinue={() => setCurrentStep(4)}
+              />
+            )}
+
+            {/* Step 4: Verification */}
+            {currentStep === 4 && (
+              <VerificationStep
+                paymentMethod={checkoutData.paymentMethod}
+                otp={checkoutData.otp}
+                voiceConfirmed={checkoutData.voiceConfirmed}
+                voiceMode={voiceMode}
+                isListening={isListening}
+                isProcessing={isProcessing}
+                onOtpChange={(otp) => setCheckoutData(prev => ({ ...prev, otp }))}
+                onVoiceConfirm={() => setCheckoutData(prev => ({ ...prev, voiceConfirmed: true }))}
+                onCompleteOrder={handlePaymentSuccess}
+              />
             )}
           </div>
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-24">
-              <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  {cartItems.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span>{item.title} x {item.quantity}</span>
-                      <span>${(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-                <hr />
-                <div className="flex justify-between font-bold text-lg">
-                  <span>Total</span>
-                  <span className="text-orange-600">${getTotalPrice().toFixed(2)}</span>
-                </div>
-                
-                <div className="space-y-2 pt-4">
-                  <div className={`flex items-center gap-2 ${currentStep >= 1 ? 'text-green-600' : 'text-gray-400'}`}>
-                    <CheckCircle className="h-4 w-4" />
-                    <span className="text-sm">Address {currentStep > 1 ? '✓' : ''}</span>
-                  </div>
-                  <div className={`flex items-center gap-2 ${currentStep >= 2 ? 'text-green-600' : 'text-gray-400'}`}>
-                    <CheckCircle className="h-4 w-4" />
-                    <span className="text-sm">Payment Method {currentStep > 2 ? '✓' : ''}</span>
-                  </div>
-                  <div className={`flex items-center gap-2 ${currentStep >= 3 ? 'text-green-600' : 'text-gray-400'}`}>
-                    <CheckCircle className="h-4 w-4" />
-                    <span className="text-sm">Verification</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <OrderSummary
+              cartItems={cartItems}
+              getTotalPrice={getTotalPrice}
+              currentStep={currentStep}
+            />
           </div>
         </div>
       </div>
