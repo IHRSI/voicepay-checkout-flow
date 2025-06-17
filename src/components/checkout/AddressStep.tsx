@@ -43,9 +43,9 @@ const AddressStep: React.FC<AddressStepProps> = ({
               currentStep={2}
             />
             {address && (
-              <div className="p-4 bg-gray-50 rounded-lg border">
-                <Label className="text-sm text-gray-600">Captured Address:</Label>
-                <p className="font-medium mt-1 text-gray-800">{address}</p>
+              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                <Label className="text-sm text-green-600">Captured Address:</Label>
+                <p className="font-medium mt-1 text-green-800">{address}</p>
               </div>
             )}
             <Button
