@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { ShoppingBag } from 'lucide-react';
 import { CartItem } from '@/types/product';
 import VoiceStatusIndicator from './VoiceStatusIndicator';
@@ -12,6 +13,7 @@ interface ProductOverviewProps {
   isListening: boolean;
   isProcessing: boolean;
   onSwitchToManual: () => void;
+  onContinue: () => void;
 }
 
 const ProductOverview: React.FC<ProductOverviewProps> = ({
@@ -20,7 +22,8 @@ const ProductOverview: React.FC<ProductOverviewProps> = ({
   voiceMode,
   isListening,
   isProcessing,
-  onSwitchToManual
+  onSwitchToManual,
+  onContinue
 }) => {
   return (
     <Card className="mb-6 shadow-lg border-gray-200 bg-gradient-to-br from-white to-gray-50">
@@ -49,14 +52,13 @@ const ProductOverview: React.FC<ProductOverviewProps> = ({
                 <p className="font-bold text-green-800">Total Amount: ${getTotalPrice().toFixed(2)}</p>
               </div>
             </div>
-            <div className="flex justify-center">
-              <button
-                onClick={onSwitchToManual}
-                className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
-              >
-                Switch to Manual Mode
-              </button>
-            </div>
+            <Button
+              onClick={onSwitchToManual}
+              variant="outline"
+              className="w-full hover:bg-orange-50 border-orange-200"
+            >
+              Switch to Manual Mode
+            </Button>
           </div>
         ) : (
           <div className="space-y-4">
@@ -74,6 +76,12 @@ const ProductOverview: React.FC<ProductOverviewProps> = ({
                 </div>
               </div>
             </div>
+            <Button 
+              onClick={onContinue}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white transition-colors"
+            >
+              Continue to Address
+            </Button>
           </div>
         )}
       </CardContent>
