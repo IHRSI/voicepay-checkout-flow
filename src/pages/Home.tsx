@@ -1,252 +1,356 @@
 
 import React, { useState, useEffect } from 'react';
-import { products } from '@/data/products';
-import ProductCard from '@/components/ProductCard';
+import { Search, ShoppingCart, MapPin, ChevronRight, Star, Heart } from 'lucide-react';
+import { useCart } from '@/context/CartContext';
+import { products, categories } from '@/data/products';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Mic, ShoppingCart, Shield, Users, Search, MapPin, User } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const navigate = useNavigate();
+  const { addToCart, cartItems } = useCart();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [currentBanner, setCurrentBanner] = useState(0);
 
-  useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem('voicepay-onboarding');
-    if (!hasSeenOnboarding) {
-      setShowOnboarding(true);
+  const banners = [
+    {
+      title: "Great Indian Festival Sale",
+      subtitle: "Up to 80% off on Electronics & Fashion",
+      image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200",
+      color: "from-orange-500 to-red-600"
+    },
+    {
+      title: "Festive Season Special",
+      subtitle: "Traditional wear & Home decor starting ₹199",
+      image: "https://images.unsplash.com/photo-1605538883669-825200433431?w=1200",
+      color: "from-purple-500 to-pink-600"
+    },
+    {
+      title: "Kitchen & Grocery Deals",
+      subtitle: "Essential items for every Indian household",
+      image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=1200",
+      color: "from-green-500 to-emerald-600"
     }
-  }, []);
-
-  const handleCloseOnboarding = () => {
-    setShowOnboarding(false);
-    localStorage.setItem('voicepay-onboarding', 'true');
-  };
-
-  const categories = [
-    { name: 'Electronics', image: '/placeholder.svg', color: 'bg-blue-100' },
-    { name: 'Fashion', image: '/placeholder.svg', color: 'bg-pink-100' },
-    { name: 'Home & Kitchen', image: '/placeholder.svg', color: 'bg-green-100' },
-    { name: 'Books', image: '/placeholder.svg', color: 'bg-yellow-100' },
-    { name: 'Sports', image: '/placeholder.svg', color: 'bg-red-100' },
-    { name: 'Beauty', image: '/placeholder.svg', color: 'bg-purple-100' },
   ];
 
   const deals = [
-    { title: "Today's Deals", discount: "Up to 70% off", products: products.slice(0, 4) },
-    { title: "Electronics Sale", discount: "Up to 50% off", products: products.slice(2, 6) },
-    { title: "Fashion Week", discount: "Up to 60% off", products: products.slice(1, 5) },
+    { title: "Electronics", discount: "Up to 70% off", count: "2000+ items" },
+    { title: "Fashion", discount: "Min 50% off", count: "5000+ styles" },
+    { title: "Home & Kitchen", discount: "Up to 60% off", count: "1000+ products" },
+    { title: "Beauty", discount: "Min 40% off", count: "500+ brands" }
   ];
 
-  return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Amazon-style Header */}
-      <div className="bg-gray-900 text-white">
-        {/* Top Bar */}
-        <div className="bg-gray-800 py-2">
-          <div className="container mx-auto px-4 flex justify-between items-center text-sm">
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                Deliver to India
-              </span>
-            </div>
-            <div className="flex items-center gap-4">
-              <span>Hello, Sign in</span>
-              <span>Returns & Orders</span>
-              <span className="flex items-center gap-1">
-                <ShoppingCart className="h-4 w-4" />
-                Cart
-              </span>
-            </div>
-          </div>
-        </div>
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentBanner((prev) => (prev + 1) % banners.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
-        {/* Main Header */}
-        <div className="py-3">
-          <div className="container mx-auto px-4 flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Mic className="h-8 w-8 text-orange-400" />
-              <h1 className="text-2xl font-bold">VoicePay</h1>
+  useEffect(() => {
+    const speak = (text: string) => {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-IN';
+        utterance.rate = 0.9;
+        utterance.pitch = 1.1;
+        window.speechSynthesis.speak(utterance);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      speak("Welcome to VoicePay Shopping! India's most accessible e-commerce platform. Browse thousands of products and experience our revolutionary voice-powered checkout. Start shopping now!");
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const handleAddToCart = (product: any) => {
+    addToCart(product);
+  };
+
+  const getCartItemCount = () => {
+    return cartItems.reduce((total, item) => total + item.quantity, 0);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Amazon-style Header */}
+      <header className="bg-gray-900 text-white sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            {/* Logo */}
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold text-orange-400">VoicePay</h1>
+              <div className="hidden md:flex items-center gap-1 text-sm">
+                <MapPin className="h-4 w-4" />
+                <span className="text-gray-300">Deliver to</span>
+                <span className="font-semibold">India</span>
+              </div>
             </div>
-            
+
             {/* Search Bar */}
-            <div className="flex-1 max-w-2xl">
-              <div className="flex">
-                <select className="bg-gray-200 text-gray-800 px-3 py-2 rounded-l-md border-r">
+            <div className="flex-1 max-w-2xl mx-4">
+              <div className="flex rounded-md overflow-hidden">
+                <select className="bg-gray-200 text-gray-900 px-3 py-2 text-sm border-r">
                   <option>All</option>
-                  <option>Electronics</option>
-                  <option>Fashion</option>
-                  <option>Books</option>
+                  {categories.slice(1).map(cat => (
+                    <option key={cat}>{cat}</option>
+                  ))}
                 </select>
                 <Input
-                  type="text"
-                  placeholder="Search VoicePay"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1 rounded-none border-0 focus:ring-0"
+                  placeholder="Search VoicePay.in"
+                  className="flex-1 rounded-none border-0 bg-white"
                 />
-                <Button className="rounded-l-none bg-orange-500 hover:bg-orange-600">
+                <Button className="rounded-none bg-orange-400 hover:bg-orange-500 px-4">
                   <Search className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            <Button 
-              onClick={() => setShowOnboarding(true)}
-              className="bg-orange-500 hover:bg-orange-600"
-            >
-              🎙️ Voice Shopping
-            </Button>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <div className="bg-gray-700 py-2">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center gap-6 text-sm">
-              <span className="hover:text-orange-400 cursor-pointer">All</span>
-              <span className="hover:text-orange-400 cursor-pointer">Today's Deals</span>
-              <span className="hover:text-orange-400 cursor-pointer">Customer Service</span>
-              <span className="hover:text-orange-400 cursor-pointer">Registry</span>
-              <span className="hover:text-orange-400 cursor-pointer">Gift Cards</span>
-              <span className="hover:text-orange-400 cursor-pointer">Sell</span>
+            {/* Right Side */}
+            <div className="flex items-center gap-4">
+              <div className="text-sm">
+                <div className="text-gray-300">Hello, Sign in</div>
+                <div className="font-semibold">Account & Lists</div>
+              </div>
+              <div className="text-sm">
+                <div className="text-gray-300">Returns</div>
+                <div className="font-semibold">& Orders</div>
+              </div>
+              <Button
+                onClick={() => navigate('/cart')}
+                variant="ghost"
+                className="relative text-white hover:bg-gray-800"
+              >
+                <ShoppingCart className="h-6 w-6" />
+                {getCartItemCount() > 0 && (
+                  <Badge className="absolute -top-2 -right-2 bg-orange-500 text-white">
+                    {getCartItemCount()}
+                  </Badge>
+                )}
+                <span className="ml-1">Cart</span>
+              </Button>
             </div>
           </div>
         </div>
-      </div>
+
+        {/* Navigation Bar */}
+        <div className="bg-gray-800 border-t border-gray-700">
+          <div className="container mx-auto px-4 py-2">
+            <div className="flex items-center gap-6 text-sm">
+              <Button variant="ghost" className="text-white hover:bg-gray-700 p-2">
+                All Categories
+              </Button>
+              {categories.slice(1, 6).map(category => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`hover:text-orange-400 transition-colors ${
+                    selectedCategory === category ? 'text-orange-400' : 'text-white'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+              <span className="text-orange-400 font-semibold">Today's Deals</span>
+              <span className="text-white">Customer Service</span>
+              <span className="text-white">Gift Cards</span>
+            </div>
+          </div>
+        </div>
+      </header>
 
       {/* Hero Banner */}
-      <div className="bg-gradient-to-r from-orange-400 to-orange-600 text-white py-12">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            Shop with Your Voice
-          </h2>
-          <p className="text-xl mb-6">
-            India's first voice-powered shopping experience
-          </p>
-          <div className="flex justify-center gap-4 mb-6">
-            <div className="bg-white/20 px-4 py-2 rounded-full flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              <span>Secure</span>
-            </div>
-            <div className="bg-white/20 px-4 py-2 rounded-full flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              <span>Accessible</span>
-            </div>
-            <div className="bg-white/20 px-4 py-2 rounded-full flex items-center gap-2">
-              <Mic className="h-5 w-5" />
-              <span>Voice-First</span>
-            </div>
+      <div className="relative h-96 overflow-hidden">
+        <div className={`absolute inset-0 bg-gradient-to-r ${banners[currentBanner].color} opacity-90`} />
+        <img
+          src={banners[currentBanner].image}
+          alt="Banner"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 flex items-center justify-center text-center text-white">
+          <div>
+            <h2 className="text-5xl font-bold mb-4">{banners[currentBanner].title}</h2>
+            <p className="text-xl mb-6">{banners[currentBanner].subtitle}</p>
+            <Button className="bg-orange-500 hover:bg-orange-600 text-lg px-8 py-3">
+              Shop Now
+            </Button>
           </div>
+        </div>
+        
+        {/* Banner indicators */}
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+          {banners.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentBanner(index)}
+              className={`w-3 h-3 rounded-full transition-all ${
+                index === currentBanner ? 'bg-white' : 'bg-white/50'
+              }`}
+            />
+          ))}
         </div>
       </div>
 
-      {/* Categories Section */}
-      <section className="py-8 bg-white">
-        <div className="container mx-auto px-4">
-          <h3 className="text-2xl font-bold mb-6">Shop by Category</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {categories.map((category) => (
-              <div key={category.name} className={`${category.color} p-6 rounded-lg text-center hover:shadow-lg transition-shadow cursor-pointer`}>
-                <div className="w-16 h-16 mx-auto mb-3 bg-white rounded-full flex items-center justify-center">
-                  <ShoppingCart className="h-8 w-8 text-gray-600" />
-                </div>
-                <h4 className="font-semibold text-gray-800">{category.name}</h4>
-              </div>
-            ))}
-          </div>
+      {/* Today's Deals */}
+      <div className="container mx-auto px-4 py-8">
+        <h2 className="text-2xl font-bold mb-6">Today's Deals</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {deals.map((deal, index) => (
+            <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="p-4 text-center">
+                <h3 className="font-semibold text-lg">{deal.title}</h3>
+                <p className="text-red-600 font-bold">{deal.discount}</p>
+                <p className="text-sm text-gray-600">{deal.count}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      </section>
 
-      {/* Deals Sections */}
-      {deals.map((deal, index) => (
-        <section key={index} className="py-8">
-          <div className="container mx-auto px-4">
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-800">{deal.title}</h3>
-                  <p className="text-red-600 font-semibold">{deal.discount}</p>
-                </div>
-                <Button variant="outline">See all deals</Button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {deal.products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-      ))}
-
-      {/* All Products */}
-      <section className="py-8">
-        <div className="container mx-auto px-4">
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <h3 className="text-2xl font-bold mb-6 text-gray-800">All Products</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Onboarding Modal */}
-      <Dialog open={showOnboarding} onOpenChange={setShowOnboarding}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl flex items-center gap-2">
-              <Mic className="h-8 w-8 text-orange-500" />
-              Welcome to Voice-Powered Shopping!
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              VoicePay is designed to make online shopping accessible for everyone, 
-              especially users with visual, motor, or cognitive disabilities.
-            </p>
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg">How Voice Checkout Works:</h3>
-              <div className="grid gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="bg-orange-100 text-orange-800 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">1</div>
-                  <div>
-                    <strong>Address:</strong> Speak your delivery address when prompted
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-orange-100 text-orange-800 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">2</div>
-                  <div>
-                    <strong>Payment:</strong> Choose your payment method by voice (UPI, Card, or Cash on Delivery)
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-orange-100 text-orange-800 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">3</div>
-                  <div>
-                    <strong>Security:</strong> Confirm with voice verification and OTP (if needed)
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-800">
-                💡 <strong>Tip:</strong> Look for the 🎙️ "Speak" button during checkout. 
-                You can always type manually if voice isn't available.
-              </p>
-            </div>
-            <Button 
-              onClick={handleCloseOnboarding}
-              className="w-full bg-orange-500 hover:bg-orange-600"
+        {/* Category Filter */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {categories.map(category => (
+            <Button
+              key={category}
+              variant={selectedCategory === category ? "default" : "outline"}
+              onClick={() => setSelectedCategory(category)}
+              className={selectedCategory === category ? "bg-orange-500 hover:bg-orange-600" : ""}
             >
-              Got it! Let's Shop
+              {category}
             </Button>
+          ))}
+        </div>
+
+        {/* Products Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {filteredProducts.map(product => (
+            <Card key={product.id} className="hover:shadow-lg transition-all duration-200 group">
+              <CardContent className="p-4">
+                <div className="relative mb-3">
+                  <img
+                    src={product.image}
+                    alt={product.title}
+                    className="w-full h-48 object-cover rounded-lg group-hover:scale-105 transition-transform"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 bg-white/80 hover:bg-white"
+                  >
+                    <Heart className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <h3 className="font-semibold text-sm mb-2 line-clamp-2 h-10">
+                  {product.title}
+                </h3>
+                
+                <div className="flex items-center gap-1 mb-2">
+                  <div className="flex items-center">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-3 w-3 ${
+                          i < Math.floor(product.rating.rate)
+                            ? 'text-yellow-400 fill-current'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-gray-600">({product.rating.count})</span>
+                </div>
+                
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg font-bold text-gray-900">₹{(product.price * 80).toFixed(0)}</span>
+                  <span className="text-sm text-gray-500 line-through">₹{(product.price * 100).toFixed(0)}</span>
+                  <span className="text-xs text-red-600">(20% off)</span>
+                </div>
+                
+                <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+                  {product.description}
+                </p>
+                
+                <Button
+                  onClick={() => handleAddToCart(product)}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white transition-colors"
+                  size="sm"
+                >
+                  Add to Cart
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {filteredProducts.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-600 text-lg">No products found matching your search.</p>
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white mt-12">
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <h3 className="font-semibold mb-4">Get to Know Us</h3>
+              <ul className="space-y-2 text-sm text-gray-300">
+                <li>About VoicePay</li>
+                <li>Careers</li>
+                <li>Press Releases</li>
+                <li>VoicePay Science</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-4">Connect with Us</h3>
+              <ul className="space-y-2 text-sm text-gray-300">
+                <li>Facebook</li>
+                <li>Twitter</li>
+                <li>Instagram</li>
+                <li>YouTube</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-4">Make Money with Us</h3>
+              <ul className="space-y-2 text-sm text-gray-300">
+                <li>Sell on VoicePay</li>
+                <li>Become an Affiliate</li>
+                <li>Advertise Your Products</li>
+                <li>VoicePay Pay on Merchants</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-4">Let Us Help You</h3>
+              <ul className="space-y-2 text-sm text-gray-300">
+                <li>Your Account</li>
+                <li>Returns Centre</li>
+                <li>100% Purchase Protection</li>
+                <li>VoicePay Assistant</li>
+                <li>Help</li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-400">
+            <p>&copy; 2024 VoicePay.com, Inc. or its affiliates. Built for accessibility and innovation.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
