@@ -47,7 +47,11 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ cartItems, getTotalPrice, c
           </div>
           <div className={`flex items-center gap-2 transition-colors ${currentStep >= 4 ? 'text-green-600' : 'text-gray-400'}`}>
             <CheckCircle className="h-4 w-4" />
-            <span className="text-sm font-medium">Verification</span>
+            <span className="text-sm font-medium">Payment Details {currentStep > 4 ? '✓' : ''}</span>
+          </div>
+          <div className={`flex items-center gap-2 transition-colors ${currentStep >= 5 ? 'text-green-600' : 'text-gray-400'}`}>
+            <CheckCircle className="h-4 w-4" />
+            <span className="text-sm font-medium">OTP Verification</span>
           </div>
         </div>
       </CardContent>
