@@ -53,6 +53,15 @@ const Checkout = () => {
     }
   });
 
+  // Stop all speech synthesis when component unmounts or step changes
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [currentStep]);
+
   // Enhanced speak function with faster rate
   const speakFast = async (text: string): Promise<void> => {
     return new Promise((resolve) => {
@@ -62,8 +71,11 @@ const Checkout = () => {
         return;
       }
 
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.5; // Faster speech
+      utterance.rate = 1.8; // Even faster speech
       utterance.pitch = 1.1;
       utterance.volume = 1;
       utterance.lang = 'en-IN';
@@ -79,9 +91,12 @@ const Checkout = () => {
   useEffect(() => {
     const speakIntro = async () => {
       if ('speechSynthesis' in window) {
+        // Cancel any existing speech
+        window.speechSynthesis.cancel();
+        
         const utterance = new SpeechSynthesisUtterance("Welcome to VoicePay checkout. India's most accessible payment experience. I will guide you through simple steps using your voice. Let's complete your order together!");
         utterance.lang = 'en-IN';
-        utterance.rate = 1.4;
+        utterance.rate = 1.8;
         utterance.pitch = 1.1;
         window.speechSynthesis.speak(utterance);
       }
@@ -95,7 +110,7 @@ const Checkout = () => {
   useEffect(() => {
     if (!hasStarted && voiceMode && cartItems.length > 0) {
       setHasStarted(true);
-      setTimeout(() => startVoiceCheckout(), 1500);
+      setTimeout(() => startVoiceCheckout(), 2000);
     }
   }, [hasStarted, voiceMode, cartItems.length]);
 
@@ -229,7 +244,8 @@ const Checkout = () => {
 
   const handlePaymentDetailsInput = async (lowerTranscript: string, transcript: string) => {
     if (checkoutData.paymentMethod === 'Cash on Delivery') {
-      await speakFast("Perfect! Your order will be delivered with cash on delivery option. Payment done! Thank you for shopping with us. Your products will be delivered to your doorstep in 3-5 business days. Continue shopping with VoicePay!");
+      // Skip payment details for COD and go directly to success
+      await speakFast("Perfect! Your order has been placed successfully with cash on delivery option. Payment done! Thank you for shopping with us. Your products will be delivered to your doorstep in 3-5 business days. Continue shopping with VoicePay!");
       setTimeout(() => handlePaymentSuccess(), 2000);
       return;
     }
@@ -337,7 +353,7 @@ const Checkout = () => {
           
         case 'paymentMethod':
           if (checkoutData.paymentMethod === 'Cash on Delivery') {
-            await speakFast("Perfect! Your order will be delivered with cash on delivery option. Payment done! Thank you for shopping with us. Your products will be delivered to your doorstep in 3-5 business days. Continue shopping with VoicePay!");
+            await speakFast("Perfect! Your order has been placed successfully with cash on delivery option. Payment done! Thank you for shopping with us. Your products will be delivered to your doorstep in 3-5 business days. Continue shopping with VoicePay!");
             setTimeout(() => handlePaymentSuccess(), 2000);
             return;
           }
@@ -472,6 +488,10 @@ const Checkout = () => {
   };
 
   const handlePaymentSuccess = () => {
+    // Cancel any ongoing speech before navigating
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
     clearCart();
     navigate('/success', { 
       state: { 
@@ -483,6 +503,10 @@ const Checkout = () => {
   };
 
   const switchToManualMode = () => {
+    // Cancel speech when switching to manual mode
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
     setVoiceMode(false);
     speakFast("Switched to manual mode. You can now type your information.");
   };
@@ -541,7 +565,13 @@ const Checkout = () => {
                 isListening={isListening}
                 isProcessing={isProcessing}
                 onPaymentMethodChange={(method) => setCheckoutData(prev => ({ ...prev, paymentMethod: method as any }))}
-                onContinue={() => setCurrentStep(4)}
+                onContinue={() => {
+                  if (checkoutData.paymentMethod === 'Cash on Delivery') {
+                    handlePaymentSuccess();
+                  } else {
+                    setCurrentStep(4);
+                  }
+                }}
               />
             )}
 
