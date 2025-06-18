@@ -21,14 +21,14 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ cartItems, getTotalPrice, c
           {cartItems.map((item) => (
             <div key={item.id} className="flex justify-between text-sm py-2 border-b border-gray-100">
               <span className="font-medium text-gray-700">{item.title} x {item.quantity}</span>
-              <span className="font-semibold text-gray-900">${(item.price * item.quantity).toFixed(2)}</span>
+              <span className="font-semibold text-gray-900">₹{(item.price * item.quantity * 80).toFixed(0)}</span>
             </div>
           ))}
         </div>
         <div className="border-t pt-4">
           <div className="flex justify-between font-bold text-lg">
             <span className="text-gray-800">Total</span>
-            <span className="text-orange-600">${getTotalPrice().toFixed(2)}</span>
+            <span className="text-orange-600">₹{(getTotalPrice() * 80).toFixed(0)}</span>
           </div>
         </div>
         
