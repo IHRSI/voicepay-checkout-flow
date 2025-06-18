@@ -1,5 +1,15 @@
-
 import { Product } from '@/types/product';
+
+export const categories = [
+  'All',
+  'Electronics',
+  'Clothing',
+  'Grocery & Gourmet Food',
+  'Beauty & Personal Care',
+  'Sports & Outdoors',
+  'Home & Kitchen',
+  'Office Products'
+];
 
 export const products: Product[] = [
   {
