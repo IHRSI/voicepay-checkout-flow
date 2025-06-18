@@ -11,11 +11,16 @@ const Cart = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Cancel any ongoing speech first
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+
     const speak = (text: string) => {
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'en-IN';
-        utterance.rate = 0.8;
+        utterance.rate = 2.2;
         utterance.pitch = 1.1;
         window.speechSynthesis.speak(utterance);
       }
@@ -23,18 +28,24 @@ const Cart = () => {
 
     const timer = setTimeout(() => {
       if (cartItems.length > 0) {
-        // Create accurate product list
+        // Create accurate product list with rupees
         const productList = cartItems.map((item, index) => 
-          `${index + 1}. ${item.title}, quantity ${item.quantity}, price ${(item.price * item.quantity).toFixed(2)} dollars`
+          `${index + 1}. ${item.title}, quantity ${item.quantity}, price ${(item.price * item.quantity * 80).toFixed(0)} rupees`
         ).join('. ');
         
-        speak(`Your shopping cart. You have ${cartItems.length} items. ${productList}. Total amount is ${getTotalPrice().toFixed(2)} dollars. Review your items and proceed to voice checkout when ready.`);
+        speak(`Your shopping cart. You have ${cartItems.length} items. ${productList}. Total amount is ${(getTotalPrice() * 80).toFixed(0)} rupees. Review your items and proceed to voice checkout when ready.`);
       } else {
         speak("Your shopping cart is empty. Browse our products to add items and experience India's most accessible checkout process.");
       }
     }, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      // Cancel speech when component unmounts
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
   }, [cartItems, getTotalPrice]);
 
   if (cartItems.length === 0) {

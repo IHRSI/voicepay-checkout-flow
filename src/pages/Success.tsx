@@ -13,14 +13,47 @@ const Success = () => {
   useEffect(() => {
     if (!orderData) {
       navigate('/');
+      return;
     }
+
+    // Cancel any ongoing speech first
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+
+    const speak = (text: string) => {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-IN';
+        utterance.rate = 2.2;
+        utterance.pitch = 1.1;
+        window.speechSynthesis.speak(utterance);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      const { isCOD, total } = orderData;
+      if (isCOD) {
+        speak(`Order placed successfully for ${(total * 80).toFixed(0)} rupees! Your items will be delivered and you can pay cash on delivery. Happy shopping with VoicePay!`);
+      } else {
+        speak(`Payment successful for ${(total * 80).toFixed(0)} rupees! Your order has been placed successfully. Thank you for shopping with VoicePay! Happy shopping!`);
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+      // Cancel speech when component unmounts
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
   }, [orderData, navigate]);
 
   if (!orderData) {
     return null;
   }
 
-  const { orderData: checkout, total, items } = orderData;
+  const { orderData: checkout, total, items, isCOD } = orderData;
   const orderId = `VP${Date.now().toString().slice(-6)}`;
 
   return (
@@ -30,8 +63,12 @@ const Success = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
             <CheckCircle className="h-12 w-12 text-green-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Payment Successful!</h1>
-          <p className="text-gray-600">Your order has been placed successfully</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            {isCOD ? 'Order Placed Successfully!' : 'Payment Successful!'}
+          </h1>
+          <p className="text-gray-600">
+            {isCOD ? 'Your order has been placed with Cash on Delivery' : 'Your order has been placed successfully'}
+          </p>
         </div>
 
         <Card className="mb-6">
@@ -49,7 +86,7 @@ const Success = () => {
               </div>
               <div>
                 <span className="font-semibold text-gray-600">Total Amount:</span>
-                <p className="text-xl font-bold text-green-600">${total.toFixed(2)}</p>
+                <p className="text-xl font-bold text-green-600">₹{(total * 80).toFixed(0)}</p>
               </div>
               <div>
                 <span className="font-semibold text-gray-600">Payment Method:</span>
@@ -65,6 +102,15 @@ const Success = () => {
               <span className="font-semibold text-gray-600">Delivery Address:</span>
               <p className="mt-1 p-3 bg-gray-50 rounded-lg">{checkout.address}</p>
             </div>
+
+            {isCOD && (
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-blue-800 font-semibold">Cash on Delivery</p>
+                <p className="text-sm text-blue-700 mt-1">
+                  Please keep ₹{(total * 80).toFixed(0)} ready for payment when your order arrives.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -86,7 +132,7 @@ const Success = () => {
                     <p className="text-gray-600 text-xs">Quantity: {item.quantity}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
+                    <p className="font-semibold">₹{(item.price * item.quantity * 80).toFixed(0)}</p>
                   </div>
                 </div>
               ))}

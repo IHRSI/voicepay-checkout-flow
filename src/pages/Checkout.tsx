@@ -44,6 +44,7 @@ const Checkout = () => {
   const [confirmationType, setConfirmationType] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
+  const [voiceHasSpoken, setVoiceHasSpoken] = useState(false);
 
   const { isListening, speak } = useVoice({
     onResult: (transcript) => handleVoiceInput(transcript),
@@ -69,7 +70,7 @@ const Checkout = () => {
     };
   }, [currentStep]);
 
-  // Enhanced speak function with faster rate
+  // Enhanced speak function with faster rate and proper cancellation
   const speakFast = async (text: string): Promise<void> => {
     return new Promise((resolve) => {
       if (!('speechSynthesis' in window)) {
@@ -82,7 +83,7 @@ const Checkout = () => {
       window.speechSynthesis.cancel();
 
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 2.2; // Faster speech
+      utterance.rate = 2.5; // Even faster speech
       utterance.pitch = 1.1;
       utterance.volume = 1;
       utterance.lang = 'en-IN';
@@ -94,39 +95,37 @@ const Checkout = () => {
     });
   };
 
-  // Voice introduction for checkout page
+  // Voice introduction for checkout page - only once
   useEffect(() => {
-    const speakIntro = async () => {
-      if ('speechSynthesis' in window && voiceMode && cartItems.length > 0) {
-        // Cancel any existing speech
+    if (voiceMode && cartItems.length > 0 && !voiceHasSpoken) {
+      // Cancel any existing speech
+      if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
-        
-        const utterance = new SpeechSynthesisUtterance("Welcome to VoicePay checkout. India's most accessible payment experience. I will guide you through simple steps using your voice. Let's complete your order together!");
-        utterance.lang = 'en-IN';
-        utterance.rate = 2.2;
-        utterance.pitch = 1.1;
-        window.speechSynthesis.speak(utterance);
       }
-    };
-
-    const timer = setTimeout(speakIntro, 500);
-    return () => clearTimeout(timer);
-  }, [voiceMode, cartItems.length]);
+      
+      const timer = setTimeout(async () => {
+        await speakFast("Welcome to VoicePay checkout. India's most accessible payment experience. I will guide you through simple steps using your voice. Let's complete your order together!");
+        setVoiceHasSpoken(true);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [voiceMode, cartItems.length, voiceHasSpoken]);
 
   // Auto-start voice checkout when component mounts
   useEffect(() => {
-    if (!hasStarted && voiceMode && cartItems.length > 0) {
+    if (!hasStarted && voiceMode && cartItems.length > 0 && voiceHasSpoken) {
       setHasStarted(true);
       setTimeout(() => startVoiceCheckout(), 2000);
     }
-  }, [hasStarted, voiceMode, cartItems.length]);
+  }, [hasStarted, voiceMode, cartItems.length, voiceHasSpoken]);
 
   const startVoiceCheckout = async () => {
     const productSummary = cartItems.map((item, index) => 
-      `${index + 1}. ${item.title}, quantity ${item.quantity}, price ${(item.price * item.quantity).toFixed(2)} dollars`
+      `${index + 1}. ${item.title}, quantity ${item.quantity}, price ${(item.price * item.quantity * 80).toFixed(0)} rupees`
     ).join('. ');
     
-    await speakFast(`Namaste! Let me tell you about your order. You have ${cartItems.length} items. ${productSummary}. Your total amount is ${getTotalPrice().toFixed(2)} dollars. Are you ready to proceed? Say yes to continue.`);
+    await speakFast(`Namaste! Let me tell you about your order. You have ${cartItems.length} items. ${productSummary}. Your total amount is ${(getTotalPrice() * 80).toFixed(0)} rupees. Are you ready to proceed? Say yes to continue.`);
     
     setTimeout(() => {
       setIsProcessing(true);
@@ -141,7 +140,7 @@ const Checkout = () => {
       
       recognition.continuous = false;
       recognition.interimResults = false;
-      recognition.lang = 'en-US';
+      recognition.lang = 'en-IN'; // Better for Indian English
 
       recognition.onstart = () => {
         console.log('Voice recognition started');
@@ -160,6 +159,14 @@ const Checkout = () => {
       recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
         setIsProcessing(false);
+        
+        // Retry on network error
+        if (event.error === 'network') {
+          setTimeout(() => {
+            setIsProcessing(true);
+            startListening();
+          }, 1000);
+        }
       };
 
       recognition.start();
@@ -197,7 +204,7 @@ const Checkout = () => {
   const handleReadyConfirmation = async (lowerTranscript: string) => {
     if (lowerTranscript.includes('yes') || lowerTranscript.includes('ready') || lowerTranscript.includes('proceed')) {
       setCurrentStep(2);
-      await speakFast("Excellent! Step 2: I have 3 saved addresses for you. Say 'address 1', 'address 2', or 'address 3' to select. Address 1: MG Road New Delhi. Address 2: Brigade Road Bangalore. Address 3: Marine Drive Mumbai.");
+      await speakFast("Excellent! Step 2: I have 3 saved addresses for you. Say 'address 1' for MG Road New Delhi, 'address 2' for Brigade Road Bangalore, or 'address 3' for Marine Drive Mumbai. Which address would you like?");
       setTimeout(() => {
         setIsProcessing(true);
         startListening();
@@ -214,11 +221,11 @@ const Checkout = () => {
   const handleAddressSelection = async (lowerTranscript: string) => {
     let addressIndex = -1;
     
-    if (lowerTranscript.includes('address 1') || lowerTranscript.includes('first') || lowerTranscript.includes('one')) {
+    if (lowerTranscript.includes('address 1') || lowerTranscript.includes('first') || lowerTranscript.includes('one') || lowerTranscript.includes('1')) {
       addressIndex = 0;
-    } else if (lowerTranscript.includes('address 2') || lowerTranscript.includes('second') || lowerTranscript.includes('two')) {
+    } else if (lowerTranscript.includes('address 2') || lowerTranscript.includes('second') || lowerTranscript.includes('two') || lowerTranscript.includes('2')) {
       addressIndex = 1;
-    } else if (lowerTranscript.includes('address 3') || lowerTranscript.includes('third') || lowerTranscript.includes('three')) {
+    } else if (lowerTranscript.includes('address 3') || lowerTranscript.includes('third') || lowerTranscript.includes('three') || lowerTranscript.includes('3')) {
       addressIndex = 2;
     }
     
@@ -226,7 +233,7 @@ const Checkout = () => {
       setSelectedAddressIndex(addressIndex);
       setCheckoutData(prev => ({ ...prev, address: savedAddresses[addressIndex] }));
       
-      await speakFast(`You selected ${savedAddresses[addressIndex]}. Is this correct? Say yes to confirm.`);
+      await speakFast(`Perfect! You selected ${savedAddresses[addressIndex]}. Is this correct? Say yes to confirm.`);
       setAwaitingConfirmation(true);
       setConfirmationType('address');
       
@@ -235,7 +242,7 @@ const Checkout = () => {
         startListening();
       }, 400);
     } else {
-      await speakFast("Please say 'address 1', 'address 2', or 'address 3' to select your delivery address.");
+      await speakFast("Please say 'address 1', 'address 2', or 'address 3' to select your delivery address. Or say 'one', 'two', or 'three'.");
       setTimeout(() => {
         setIsProcessing(true);
         startListening();
@@ -276,7 +283,7 @@ const Checkout = () => {
 
   const handlePaymentDetailsInput = async (lowerTranscript: string, transcript: string) => {
     if (checkoutData.paymentMethod === 'Cash on Delivery') {
-      await speakFast("Perfect! Your order has been placed successfully with cash on delivery. Payment completed! Thank you for shopping with VoicePay!");
+      await speakFast(`Perfect! Your order has been placed successfully with cash on delivery for ${(getTotalPrice() * 80).toFixed(0)} rupees. Order placed! Happy shopping with VoicePay!`);
       setTimeout(() => handlePaymentSuccess(), 2000);
       return;
     }
@@ -384,7 +391,7 @@ const Checkout = () => {
           
         case 'paymentMethod':
           if (checkoutData.paymentMethod === 'Cash on Delivery') {
-            await speakFast("Perfect! Your order has been placed successfully with cash on delivery. Payment completed! Thank you for shopping with VoicePay!");
+            await speakFast(`Perfect! Your order has been placed successfully with cash on delivery for ${(getTotalPrice() * 80).toFixed(0)} rupees. Order placed! Happy shopping with VoicePay!`);
             setTimeout(() => handlePaymentSuccess(), 2000);
             return;
           }
@@ -435,7 +442,7 @@ const Checkout = () => {
           break;
           
         case 'finalOtp':
-          await speakFast("Payment successful! Thank you for shopping with VoicePay. Your order has been placed successfully!");
+          await speakFast(`Payment successful for ${(getTotalPrice() * 80).toFixed(0)} rupees! Thank you for shopping with VoicePay. Your order has been placed successfully! Happy shopping!`);
           setTimeout(() => handlePaymentSuccess(), 2000);
           break;
       }
@@ -527,7 +534,8 @@ const Checkout = () => {
       state: { 
         orderData: { ...checkoutData, ...paymentDetails },
         total: getTotalPrice(),
-        items: cartItems
+        items: cartItems,
+        isCOD: checkoutData.paymentMethod === 'Cash on Delivery'
       }
     });
   };
