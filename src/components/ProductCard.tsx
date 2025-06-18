@@ -43,7 +43,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               <Star
                 key={i}
                 className={`h-4 w-4 ${
-                  i < Math.floor(product.rating)
+                  i < Math.floor(product.rating?.rate || 4)
                     ? 'text-yellow-400 fill-current'
                     : 'text-gray-300'
                 }`}
@@ -51,7 +51,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             ))}
           </div>
           <span className="text-sm text-gray-600 ml-2">
-            ({product.reviews})
+            ({product.rating?.count || 100})
           </span>
         </div>
         
