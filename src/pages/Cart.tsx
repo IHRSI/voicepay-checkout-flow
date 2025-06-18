@@ -23,14 +23,19 @@ const Cart = () => {
 
     const timer = setTimeout(() => {
       if (cartItems.length > 0) {
-        speak(`Your shopping cart. You have ${cartItems.length} items worth ${getTotalPrice().toFixed(2)} dollars. Review your items and proceed to voice checkout when ready.`);
+        // Create accurate product list
+        const productList = cartItems.map((item, index) => 
+          `${index + 1}. ${item.title}, quantity ${item.quantity}, price ${(item.price * item.quantity).toFixed(2)} dollars`
+        ).join('. ');
+        
+        speak(`Your shopping cart. You have ${cartItems.length} items. ${productList}. Total amount is ${getTotalPrice().toFixed(2)} dollars. Review your items and proceed to voice checkout when ready.`);
       } else {
         speak("Your shopping cart is empty. Browse our products to add items and experience India's most accessible checkout process.");
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [cartItems.length]);
+  }, [cartItems, getTotalPrice]);
 
   if (cartItems.length === 0) {
     return (
