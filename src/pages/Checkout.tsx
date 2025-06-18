@@ -201,8 +201,7 @@ const Checkout = () => {
           
           <div className="flex items-center justify-center gap-4 mt-4">
             <Button
-              onClick={() => setVoiceMode(!vo
-iceMode)}
+              onClick={() => setVoiceMode(!voiceMode)}
               variant={voiceMode ? "default" : "outline"}
               className="flex items-center gap-2"
             >
