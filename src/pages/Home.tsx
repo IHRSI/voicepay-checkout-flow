@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, ShoppingCart, MapPin, ChevronRight, Star, Heart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
@@ -265,14 +264,14 @@ const Home = () => {
                       <Star
                         key={i}
                         className={`h-3 w-3 ${
-                          i < Math.floor(product.rating.rate)
+                          i < Math.floor(product.rating?.rate || 4)
                             ? 'text-yellow-400 fill-current'
                             : 'text-gray-300'
                         }`}
                       />
                     ))}
                   </div>
-                  <span className="text-xs text-gray-600">({product.rating.count})</span>
+                  <span className="text-xs text-gray-600">({product.rating?.count || 100})</span>
                 </div>
                 
                 <div className="flex items-center gap-2 mb-3">

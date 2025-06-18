@@ -6,8 +6,10 @@ export interface Product {
   image: string;
   description: string;
   category: string;
-  rating: number;
-  reviews: number;
+  rating: {
+    rate: number;
+    count: number;
+  };
 }
 
 export interface CartItem extends Product {
