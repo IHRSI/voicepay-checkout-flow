@@ -9,19 +9,19 @@ import VoiceStatusIndicator from './VoiceStatusIndicator';
 interface ProductOverviewProps {
   cartItems: CartItem[];
   getTotalPrice: () => number;
-  voiceMode: boolean;
-  isListening: boolean;
-  isProcessing: boolean;
-  onSwitchToManual: () => void;
+  voiceMode?: boolean;
+  isListening?: boolean;
+  isProcessing?: boolean;
+  onSwitchToManual?: () => void;
   onContinue: () => void;
 }
 
 const ProductOverview: React.FC<ProductOverviewProps> = ({
   cartItems,
   getTotalPrice,
-  voiceMode,
-  isListening,
-  isProcessing,
+  voiceMode = false,
+  isListening = false,
+  isProcessing = false,
   onSwitchToManual,
   onContinue
 }) => {
@@ -45,20 +45,22 @@ const ProductOverview: React.FC<ProductOverviewProps> = ({
               <h3 className="font-semibold text-green-800 mb-2">🛍️ Order Summary</h3>
               {cartItems.map((item, index) => (
                 <div key={item.id} className="text-sm text-green-700 mb-1">
-                  {index + 1}. {item.title} - Quantity: {item.quantity} - ${(item.price * item.quantity).toFixed(2)}
+                  {index + 1}. {item.title} - Quantity: {item.quantity} - ₹{(item.price * item.quantity * 80).toFixed(0)}
                 </div>
               ))}
               <div className="mt-3 pt-3 border-t border-green-300">
-                <p className="font-bold text-green-800">Total Amount: ${getTotalPrice().toFixed(2)}</p>
+                <p className="font-bold text-green-800">Total Amount: ₹{(getTotalPrice() * 80).toFixed(0)}</p>
               </div>
             </div>
-            <Button
-              onClick={onSwitchToManual}
-              variant="outline"
-              className="w-full hover:bg-orange-50 border-orange-200"
-            >
-              Switch to Manual Mode
-            </Button>
+            {onSwitchToManual && (
+              <Button
+                onClick={onSwitchToManual}
+                variant="outline"
+                className="w-full hover:bg-orange-50 border-orange-200"
+              >
+                Switch to Manual Mode
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -67,12 +69,12 @@ const ProductOverview: React.FC<ProductOverviewProps> = ({
               {cartItems.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm py-1">
                   <span>{item.title} x {item.quantity}</span>
-                  <span>${(item.price * item.quantity).toFixed(2)}</span>
+                  <span>₹{(item.price * item.quantity * 80).toFixed(0)}</span>
                 </div>
               ))}
               <div className="mt-2 pt-2 border-t border-blue-200">
                 <div className="flex justify-between font-bold">
-                  <span>Total: ${getTotalPrice().toFixed(2)}</span>
+                  <span>Total: ₹{(getTotalPrice() * 80).toFixed(0)}</span>
                 </div>
               </div>
             </div>

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,7 +36,7 @@ const AddressStep: React.FC<AddressStepProps> = ({
   onSwitchToManual
 }) => {
   const { language, t } = useLanguage();
-  const [voiceRecognition, setVoiceRecognition] = useState<SpeechRecognition | null>(null);
+  const [voiceRecognition, setVoiceRecognition] = useState<any>(null);
 
   useEffect(() => {
     if (!voiceMode) return;
@@ -56,15 +57,14 @@ const AddressStep: React.FC<AddressStepProps> = ({
         return;
       }
 
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
-      recognition.maxAlternatives = 3;
 
-      recognition.onresult = (event) => {
+      recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript.toLowerCase().trim();
         console.log('Address selection transcript:', transcript);
         
@@ -96,17 +96,17 @@ const AddressStep: React.FC<AddressStepProps> = ({
         
         // Restart listening after selection
         setTimeout(() => {
-          if (recognition && !recognition.aborted) {
+          if (recognition) {
             recognition.start();
           }
         }, 2000);
       };
 
-      recognition.onerror = (event) => {
+      recognition.onerror = (event: any) => {
         console.error('Address recognition error:', event.error);
         if (event.error !== 'aborted') {
           setTimeout(() => {
-            if (recognition && !recognition.aborted) {
+            if (recognition) {
               recognition.start();
             }
           }, 1000);
@@ -115,7 +115,7 @@ const AddressStep: React.FC<AddressStepProps> = ({
 
       recognition.onend = () => {
         setTimeout(() => {
-          if (recognition && !recognition.aborted) {
+          if (recognition) {
             recognition.start();
           }
         }, 500);

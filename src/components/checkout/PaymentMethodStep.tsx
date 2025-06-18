@@ -13,6 +13,7 @@ interface PaymentMethodStepProps {
   isProcessing: boolean;
   onPaymentMethodChange: (method: string) => void;
   onContinue: () => void;
+  onSwitchToManual?: () => void;
 }
 
 const PaymentMethodStep: React.FC<PaymentMethodStepProps> = ({
@@ -21,7 +22,8 @@ const PaymentMethodStep: React.FC<PaymentMethodStepProps> = ({
   isListening,
   isProcessing,
   onPaymentMethodChange,
-  onContinue
+  onContinue,
+  onSwitchToManual
 }) => {
   const paymentMethods = ['UPI', 'Card', 'Cash on Delivery'];
 
@@ -46,6 +48,15 @@ const PaymentMethodStep: React.FC<PaymentMethodStepProps> = ({
                 <Label className="text-sm text-gray-600">Selected Method:</Label>
                 <p className="font-medium mt-1 text-gray-800">{paymentMethod}</p>
               </div>
+            )}
+            {onSwitchToManual && (
+              <Button
+                onClick={onSwitchToManual}
+                variant="outline"
+                className="w-full hover:bg-orange-50 border-orange-200"
+              >
+                Switch to Manual Mode
+              </Button>
             )}
           </div>
         ) : (

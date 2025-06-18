@@ -40,7 +40,7 @@ const Checkout = () => {
   const [appliedOfferCode, setAppliedOfferCode] = useState('');
 
   // Voice recognition
-  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+  const [recognition, setRecognition] = useState<any>(null);
 
   // Calculate final total
   const subtotal = getTotalPrice() * 80;
@@ -63,21 +63,20 @@ const Checkout = () => {
     if (!voiceMode || currentStep === 1) return;
 
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const rec = new SpeechRecognition();
       rec.continuous = false;
       rec.interimResults = true;
       rec.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
-      rec.maxAlternatives = 5;
 
       rec.onstart = () => setIsListening(true);
       rec.onend = () => setIsListening(false);
-      rec.onerror = (event) => {
+      rec.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error);
         setIsListening(false);
       };
 
-      rec.onresult = (event) => {
+      rec.onresult = (event: any) => {
         const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
         console.log('Voice input:', transcript);
         handleVoiceCommand(transcript);
@@ -202,7 +201,8 @@ const Checkout = () => {
           
           <div className="flex items-center justify-center gap-4 mt-4">
             <Button
-              onClick={() => setVoiceMode(!voiceMode)}
+              onClick={() => setVoiceMode(!vo
+iceMode)}
               variant={voiceMode ? "default" : "outline"}
               className="flex items-center gap-2"
             >
@@ -232,6 +232,10 @@ const Checkout = () => {
               <ProductOverview
                 cartItems={cartItems}
                 getTotalPrice={getTotalPrice}
+                voiceMode={voiceMode}
+                isListening={isListening}
+                isProcessing={isProcessing}
+                onSwitchToManual={() => setVoiceMode(false)}
                 onContinue={nextStep}
               />
             )}
@@ -332,7 +336,7 @@ const Checkout = () => {
                     {language === 'hi' ? 'लागू ऑफर' : 'Applied Offer'}
                   </h3>
                   <p className="text-sm text-green-700">
-                    {appliedOfferCode}: -{appliedDiscount.toFixed(0)} ₹
+                    {appliedOfferCode}: -₹{appliedDiscount.toFixed(0)}
                   </p>
                   <p className="font-bold text-green-800 mt-2">
                     {language === 'hi' ? 'अंतिम राशि' : 'Final Amount'}: ₹{finalTotal.toFixed(0)}
