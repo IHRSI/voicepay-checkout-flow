@@ -9,83 +9,13 @@ import { products } from '@/data/products';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, Mic, MicOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 
 const Home = () => {
   const navigate = useNavigate();
   const { addToCart, cartItems } = useCart();
   const { language, t } = useLanguage();
   const [voiceMode, setVoiceMode] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState<any>(null);
-
-  const speak = (text: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
-      utterance.rate = language === 'hi' ? 0.8 : 0.9;
-      utterance.pitch = 1.0;
-      utterance.volume = 0.9;
-      window.speechSynthesis.speak(utterance);
-    }
-  };
-
-  // Voice recognition setup
-  useEffect(() => {
-    if (!voiceMode) return;
-
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const rec = new SpeechRecognition();
-      
-      rec.continuous = false;
-      rec.interimResults = false;
-      rec.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
-
-      rec.onstart = () => setIsListening(true);
-      rec.onend = () => {
-        setIsListening(false);
-        // Auto-restart for continuous listening
-        setTimeout(() => {
-          if (rec && voiceMode) {
-            rec.start();
-          }
-        }, 1000);
-      };
-      
-      rec.onerror = (event: any) => {
-        console.error('Voice recognition error:', event.error);
-        setIsListening(false);
-      };
-
-      rec.onresult = (event: any) => {
-        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
-        console.log('Voice command:', transcript);
-        handleVoiceCommand(transcript);
-      };
-
-      setRecognition(rec);
-      rec.start();
-    }
-
-    return () => {
-      if (recognition) {
-        recognition.abort();
-      }
-    };
-  }, [voiceMode, language]);
-
-  // Initial welcome message
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const welcomeText = language === 'hi' 
-        ? 'VoicePay में आपका स्वागत है! भारत का सबसे सुलभ शॉपिंग प्लेटफॉर्म। वॉयस मोड चालू करने के लिए वॉयस बटन दबाएं।'
-        : 'Welcome to VoicePay! India\'s most accessible shopping platform. Click the voice button to enable voice mode.';
-      speak(welcomeText);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [language]);
 
   const handleVoiceCommand = (transcript: string) => {
     const isHindi = language === 'hi';
@@ -130,13 +60,7 @@ const Home = () => {
       );
       
       if (matchFound) {
-        addToCart({
-          id: product.id,
-          title: product.title,
-          price: product.price,
-          image: product.image,
-          quantity: 1
-        });
+        addToCart(product);
         
         const addedText = isHindi 
           ? `${product.title} कार्ट में जोड़ा गया।`
@@ -162,14 +86,26 @@ const Home = () => {
     }
   };
 
+  const { isListening, speak } = useVoiceRecognition({
+    voiceMode,
+    currentStep: 1,
+    onVoiceCommand: handleVoiceCommand
+  });
+
+  // Initial welcome message
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const welcomeText = language === 'hi' 
+        ? 'VoicePay में आपका स्वागत है! भारत का सबसे सुलभ शॉपिंग प्लेटफॉर्म। वॉयस मोड चालू करने के लिए वॉयस बटन दबाएं।'
+        : 'Welcome to VoicePay! India\'s most accessible shopping platform. Click the voice button to enable voice mode.';
+      speak(welcomeText);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [language]);
+
   const handleAddToCart = (product: any) => {
-    addToCart({
-      id: product.id,
-      title: product.title,
-      price: product.price,
-      image: product.image,
-      quantity: 1
-    });
+    addToCart(product);
     
     const addedText = language === 'hi' 
       ? `${product.title} कार्ट में जोड़ा गया।`
@@ -242,8 +178,7 @@ const Home = () => {
           {products.map((product) => (
             <ProductCard 
               key={product.id} 
-              product={product} 
-              onAddToCart={() => handleAddToCart(product)}
+              product={product}
             />
           ))}
         </div>

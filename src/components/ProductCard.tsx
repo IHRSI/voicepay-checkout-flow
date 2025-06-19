@@ -3,9 +3,10 @@ import React from 'react';
 import { Star, Plus } from 'lucide-react';
 import { Product } from '@/types/product';
 import { useCart } from '@/context/CartContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface ProductCardProps {
   product: Product;
@@ -13,13 +14,32 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart } = useCart();
-  const { toast } = useToast();
+  const { language } = useLanguage();
+
+  const speak = (text: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
+      utterance.rate = language === 'hi' ? 0.8 : 0.9;
+      utterance.pitch = 1.0;
+      utterance.volume = 0.9;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
 
   const handleAddToCart = () => {
     addToCart(product);
-    toast({
-      title: "Added to Cart",
-      description: `${product.title} has been added to your cart.`,
+    
+    const addedText = language === 'hi' 
+      ? `${product.title} कार्ट में जोड़ा गया।`
+      : `${product.title} added to cart.`;
+    
+    speak(addedText);
+    
+    toast.success(addedText, {
+      duration: 2000,
+      position: 'bottom-center'
     });
   };
 
@@ -66,7 +86,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           className="w-full bg-orange-500 hover:bg-orange-600 text-white"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add to Cart
+          {language === 'hi' ? 'कार्ट में जोड़ें' : 'Add to Cart'}
         </Button>
       </CardFooter>
     </Card>
