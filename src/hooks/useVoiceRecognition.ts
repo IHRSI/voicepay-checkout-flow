@@ -17,9 +17,19 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
-      utterance.rate = 1.3;
-      utterance.pitch = 1.1;
+      
+      // Set language-specific voice settings
+      if (language === 'hi') {
+        utterance.lang = 'hi-IN';
+        utterance.rate = 0.8;
+        utterance.pitch = 1.0;
+      } else {
+        utterance.lang = 'en-IN';
+        utterance.rate = 0.9;
+        utterance.pitch = 1.1;
+      }
+      
+      utterance.volume = 0.9;
       window.speechSynthesis.speak(utterance);
     }
   }, [language]);
@@ -30,24 +40,62 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const rec = new SpeechRecognition();
+      
       rec.continuous = false;
-      rec.interimResults = true;
-      rec.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
+      rec.interimResults = false;
+      
+      // Set language-specific recognition settings
+      if (language === 'hi') {
+        rec.lang = 'hi-IN';
+      } else {
+        rec.lang = 'en-IN';
+      }
 
-      rec.onstart = () => setIsListening(true);
-      rec.onend = () => setIsListening(false);
+      rec.onstart = () => {
+        setIsListening(true);
+        console.log(`Voice recognition started in ${language}`);
+      };
+      
+      rec.onend = () => {
+        setIsListening(false);
+        // Auto-restart recognition for continuous listening
+        setTimeout(() => {
+          if (rec && voiceMode) {
+            rec.start();
+          }
+        }, 500);
+      };
+      
       rec.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error);
         setIsListening(false);
+        if (event.error !== 'aborted' && voiceMode) {
+          setTimeout(() => {
+            if (rec) {
+              rec.start();
+            }
+          }, 1000);
+        }
       };
 
       rec.onresult = (event: any) => {
         const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
-        console.log('Voice input:', transcript);
+        console.log(`Voice input (${language}):`, transcript);
         onVoiceCommand(transcript);
       };
 
       setRecognition(rec);
+      
+      // Start recognition with a small delay
+      const startTimer = setTimeout(() => {
+        if (rec && voiceMode) {
+          rec.start();
+        }
+      }, 1000);
+
+      return () => {
+        clearTimeout(startTimer);
+      };
     }
 
     return () => {
@@ -56,6 +104,16 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
       }
     };
   }, [voiceMode, currentStep, language, onVoiceCommand]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recognition) {
+        recognition.abort();
+      }
+      window.speechSynthesis.cancel();
+    };
+  }, [recognition]);
 
   return {
     isListening,

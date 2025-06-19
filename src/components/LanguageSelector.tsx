@@ -12,93 +12,116 @@ interface LanguageSelectorProps {
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected }) => {
   const { setLanguage } = useLanguage();
   const [isListening, setIsListening] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
+
+  const speak = (text: string, lang: string = 'en-US') => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+      utterance.rate = 0.8;
+      utterance.pitch = 1.0;
+      utterance.volume = 0.9;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
 
   useEffect(() => {
-    // Voice prompt for language selection
-    const speak = (text: string, lang: string = 'en-US') => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = lang;
-        utterance.rate = 0.9;
-        utterance.pitch = 1.1;
-        window.speechSynthesis.speak(utterance);
-      }
-    };
-
+    // Initial welcome message
     const timer = setTimeout(() => {
-      speak("Welcome to VoicePay! Choose your language. Say English for English or Hindi for Hindi. आपका स्वागत है! English या Hindi कहें।");
+      speak("Welcome to VoicePay! नमस्ते VoicePay में आपका स्वागत है! Please choose your language. Say English for English or Hindi for Hindi. अपनी भाषा चुनें - English या Hindi कहें।");
     }, 1000);
 
-    // Voice recognition for language selection
+    // Start voice recognition
     const startListening = () => {
       if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        console.log('Speech recognition not supported');
         return;
       }
 
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const rec = new SpeechRecognition();
       
-      recognition.continuous = true;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
+      rec.continuous = true;
+      rec.interimResults = false;
+      rec.lang = 'en-US'; // Start with English for language detection
 
-      recognition.onstart = () => setIsListening(true);
+      rec.onstart = () => {
+        setIsListening(true);
+        console.log('Language selection - listening started');
+      };
       
-      recognition.onresult = (event) => {
+      rec.onresult = (event: any) => {
         const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
         console.log('Language selection transcript:', transcript);
         
-        if (transcript.includes('english') || transcript.includes('इंग्लिश')) {
+        // Enhanced language detection
+        if (transcript.includes('english') || transcript.includes('इंग्लिश') || transcript.includes('अंग्रेजी')) {
           setLanguage('en');
-          speak("English selected. Welcome to VoicePay!");
-          setTimeout(onLanguageSelected, 2000);
-        } else if (transcript.includes('hindi') || transcript.includes('हिंदी')) {
+          speak("English selected! Welcome to VoicePay. Starting your voice-powered shopping experience.", 'en-US');
+          setTimeout(onLanguageSelected, 3000);
+        } else if (transcript.includes('hindi') || transcript.includes('हिंदी') || transcript.includes('हिन्दी')) {
           setLanguage('hi');
-          speak("Hindi चुनी गई। VoicePay में आपका स्वागत है!", 'hi-IN');
-          setTimeout(onLanguageSelected, 2000);
+          speak("Hindi चुनी गई! VoicePay में आपका स्वागत है। आपका वॉयस-पावर्ड शॉपिंग अनुभव शुरू हो रहा है।", 'hi-IN');
+          setTimeout(onLanguageSelected, 3000);
+        } else {
+          // Retry prompt
+          speak("Please say English or Hindi clearly. कृपया English या Hindi स्पष्ट रूप से कहें।");
         }
       };
 
-      recognition.onerror = () => setIsListening(false);
-      recognition.onend = () => {
+      rec.onerror = (event: any) => {
+        console.error('Language selection error:', event.error);
         setIsListening(false);
-        // Restart listening after a short delay
-        setTimeout(startListening, 1000);
+        if (event.error !== 'aborted') {
+          setTimeout(() => {
+            if (rec) {
+              rec.start();
+            }
+          }, 1000);
+        }
       };
 
-      recognition.start();
+      rec.onend = () => {
+        setIsListening(false);
+        // Restart listening after a short delay
+        setTimeout(() => {
+          if (rec) {
+            rec.start();
+          }
+        }, 1000);
+      };
+
+      setRecognition(rec);
+      setTimeout(() => rec.start(), 3000);
     };
 
-    const listenTimer = setTimeout(startListening, 3000);
+    const listenTimer = setTimeout(startListening, 2000);
 
     return () => {
       clearTimeout(timer);
       clearTimeout(listenTimer);
+      if (recognition) {
+        recognition.abort();
+      }
       window.speechSynthesis.cancel();
     };
   }, [setLanguage, onLanguageSelected]);
 
   const handleLanguageSelect = (lang: 'en' | 'hi') => {
-    setLanguage(lang);
-    const speak = (text: string, speechLang: string = 'en-US') => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = speechLang;
-        utterance.rate = 0.9;
-        utterance.pitch = 1.1;
-        window.speechSynthesis.speak(utterance);
-      }
-    };
-
-    if (lang === 'en') {
-      speak("English selected. Welcome to VoicePay!");
-    } else {
-      speak("Hindi चुनी गई। VoicePay में आपका स्वागत है!", 'hi-IN');
+    if (recognition) {
+      recognition.abort();
     }
     
-    setTimeout(onLanguageSelected, 2000);
+    setLanguage(lang);
+    
+    if (lang === 'en') {
+      speak("English selected! Welcome to VoicePay. Starting your voice-powered shopping experience.", 'en-US');
+    } else {
+      speak("Hindi चुनी गई! VoicePay में आपका स्वागत है। आपका वॉयस-पावर्ड शॉपिंग अनुभव शुरू हो रहा है।", 'hi-IN');
+    }
+    
+    setTimeout(onLanguageSelected, 3000);
   };
 
   return (
@@ -116,7 +139,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
             <div className="flex items-center justify-center gap-2 mb-4">
               <Volume2 className={`h-6 w-6 ${isListening ? 'text-red-500 animate-pulse' : 'text-gray-400'}`} />
               <span className="text-sm text-gray-600">
-                {isListening ? 'Listening...' : 'Voice Ready'}
+                {isListening ? 'Listening for your choice...' : 'Voice Ready'}
               </span>
             </div>
             <p className="text-gray-600 mb-6">
@@ -130,13 +153,13 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
               onClick={() => handleLanguageSelect('en')}
               className="w-full h-14 text-lg bg-blue-600 hover:bg-blue-700 text-white"
             >
-              English
+              🇺🇸 English
             </Button>
             <Button
               onClick={() => handleLanguageSelect('hi')}
               className="w-full h-14 text-lg bg-orange-600 hover:bg-orange-700 text-white"
             >
-              हिंदी (Hindi)
+              🇮🇳 हिंदी (Hindi)
             </Button>
           </div>
           

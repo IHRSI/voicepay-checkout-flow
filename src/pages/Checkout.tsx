@@ -42,13 +42,6 @@ const Checkout = () => {
   const onVoiceCommand = useCallback((transcript: string) => {
     setIsProcessing(true);
     
-    // Handle navigation commands
-    if (transcript.includes('cancel') || transcript.includes('रद्द')) {
-      speak(language === 'hi' ? 'लेनदेन रद्द की जा रही है।' : 'Transaction being cancelled.');
-      setTimeout(() => navigate('/cart'), 1000);
-      return;
-    }
-    
     setTimeout(() => {
       handleVoiceCommand({
         transcript,
@@ -60,11 +53,13 @@ const Checkout = () => {
         setPaymentDetails,
         setOtp,
         setCurrentStep,
-        speak
+        speak,
+        selectedAddressIndex,
+        setSelectedAddressIndex
       });
       setIsProcessing(false);
     }, 1000);
-  }, [currentStep, paymentMethod, paymentDetails, language, navigate]);
+  }, [currentStep, paymentMethod, paymentDetails, language, selectedAddressIndex]);
 
   // Voice recognition hook
   const { isListening, speak } = useVoiceRecognition({
@@ -75,12 +70,14 @@ const Checkout = () => {
 
   // Step navigation with proper flow
   const nextStep = () => {
+    const isHindi = language === 'hi';
+    
     if (currentStep === 2 && selectedAddressIndex < 0) {
-      speak(language === 'hi' ? 'कृपया पहले पता चुनें।' : 'Please select an address first.');
+      speak(isHindi ? 'कृपया पहले पता चुनें।' : 'Please select an address first.');
       return;
     }
     if (currentStep === 4 && !paymentMethod) {
-      speak(language === 'hi' ? 'कृपया भुगतान विधि चुनें।' : 'Please select a payment method.');
+      speak(isHindi ? 'कृपया भुगतान विधि चुनें।' : 'Please select a payment method.');
       return;
     }
     
@@ -90,11 +87,11 @@ const Checkout = () => {
     } else if (currentStep === 5 && (paymentMethod === 'UPI' || paymentMethod === 'Card')) {
       // Check if payment details are filled
       if (paymentMethod === 'UPI' && !paymentDetails.upiAddress) {
-        speak(language === 'hi' ? 'कृपया UPI address डालें।' : 'Please enter UPI address.');
+        speak(isHindi ? 'कृपया UPI पता डालें।' : 'Please enter UPI address.');
         return;
       }
       if (paymentMethod === 'Card' && (!paymentDetails.cardNumber || !paymentDetails.cvv)) {
-        speak(language === 'hi' ? 'कृपया कार्ड की जानकारी डालें।' : 'Please enter card details.');
+        speak(isHindi ? 'कृपया कार्ड की जानकारी डालें।' : 'Please enter card details.');
         return;
       }
       setCurrentStep(6); // Go to OTP verification
@@ -107,8 +104,10 @@ const Checkout = () => {
 
   // Cancel transaction
   const cancelTransaction = () => {
+    const isHindi = language === 'hi';
+    speak(isHindi ? 'लेनदेन रद्द किया जा रहा है।' : 'Transaction being cancelled.');
     clearCart();
-    navigate('/cart');
+    setTimeout(() => navigate('/cart'), 1000);
   };
 
   // Complete order
