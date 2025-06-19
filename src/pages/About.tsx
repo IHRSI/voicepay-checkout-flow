@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Linkedin, Github, Mail, Heart, Shield, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
 const About = () => {
+  const navigate = useNavigate();
+
   const teamMembers = [
     {
       name: "Anand Venukrishnan",

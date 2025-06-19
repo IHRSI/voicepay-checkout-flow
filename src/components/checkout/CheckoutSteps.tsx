@@ -123,6 +123,7 @@ const CheckoutSteps: React.FC<CheckoutStepsProps> = ({
           onPaymentDetailsChange={onPaymentDetailsChange}
           onContinue={onNextStep}
           onSwitchToManual={onSwitchToManual}
+          onCancel={onCancel}
         />
       )}
 
