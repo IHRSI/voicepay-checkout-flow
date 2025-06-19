@@ -14,6 +14,7 @@ const Home = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [currentBanner, setCurrentBanner] = useState(0);
+  const [hasSpokenWelcome, setHasSpokenWelcome] = useState(false);
 
   const banners = [
     {
@@ -51,6 +52,8 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
+    if (hasSpokenWelcome) return;
+    
     const speak = (text: string) => {
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(text);
@@ -63,10 +66,46 @@ const Home = () => {
 
     const timer = setTimeout(() => {
       speak("Welcome to VoicePay Shopping! India's most accessible e-commerce platform. Browse thousands of products and experience our revolutionary voice-powered checkout. Start shopping now!");
+      setHasSpokenWelcome(true);
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [hasSpokenWelcome]);
+
+  // Voice navigation
+  useEffect(() => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'en-IN';
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+      console.log('Navigation transcript:', transcript);
+      
+      if (transcript.includes('cart') || transcript.includes('shopping cart')) {
+        navigate('/cart');
+      } else if (transcript.includes('checkout')) {
+        navigate('/checkout');
+      } else if (transcript.includes('about')) {
+        navigate('/about');
+      } else if (transcript.includes('our aim')) {
+        navigate('/our-aim');
+      }
+    };
+
+    recognition.start();
+
+    return () => {
+      recognition.abort();
+    };
+  }, [navigate]);
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -75,8 +114,27 @@ const Home = () => {
     return matchesSearch && matchesCategory;
   });
 
+  // Toast notification when adding to cart
   const handleAddToCart = (product: any) => {
     addToCart(product);
+    
+    // Create toast notification
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2';
+    toast.innerHTML = `
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+      </svg>
+      Added to cart: ${product.title.substring(0, 30)}${product.title.length > 30 ? '...' : ''}
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
+    }, 3000);
   };
 
   const getCartItemCount = () => {

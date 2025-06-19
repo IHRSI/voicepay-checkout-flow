@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Linkedin, Github, Mail, Heart, Shield, Users } from 'lucide-react';
@@ -237,33 +236,19 @@ const About = () => {
         </div>
       </section>
 
-      {/* Contact Section */}
-      <section className="py-16 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Join Our Mission</h2>
-            <p className="text-xl mb-8">
-              Ready to be part of the inclusive payment revolution? Let's build a better financial future together.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                className="bg-white text-blue-600 hover:bg-gray-100 transition-colors"
-              >
-                <Mail className="mr-2 h-5 w-5" />
-                Contact Us
-              </Button>
-              <Link to="/">
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  className="border-white text-white hover:bg-white hover:text-blue-600 transition-colors"
-                >
-                  Try VoicePay
-                </Button>
-              </Link>
-            </div>
-          </div>
+      {/* Join Our Mission Section */}
+      <section className="py-16 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold mb-4">Join Our Mission</h2>
+          <p className="text-xl mb-8 max-w-2xl mx-auto text-orange-100">
+            Experience the future of e-commerce today. Shop with your voice and be part of the accessibility revolution.
+          </p>
+          <Button 
+            onClick={() => navigate('/')}
+            className="bg-white text-orange-600 hover:bg-orange-50 px-8 py-3 text-lg font-semibold border border-white"
+          >
+            Try VoicePay Now
+          </Button>
         </div>
       </section>
     </div>

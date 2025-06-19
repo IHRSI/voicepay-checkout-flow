@@ -42,6 +42,13 @@ const Checkout = () => {
   const onVoiceCommand = useCallback((transcript: string) => {
     setIsProcessing(true);
     
+    // Handle navigation commands
+    if (transcript.includes('cancel') || transcript.includes('रद्द')) {
+      speak(language === 'hi' ? 'लेनदेन रद्द की जा रही है।' : 'Transaction being cancelled.');
+      setTimeout(() => navigate('/cart'), 1000);
+      return;
+    }
+    
     setTimeout(() => {
       handleVoiceCommand({
         transcript,
@@ -57,7 +64,7 @@ const Checkout = () => {
       });
       setIsProcessing(false);
     }, 1000);
-  }, [currentStep, paymentMethod, paymentDetails, language]);
+  }, [currentStep, paymentMethod, paymentDetails, language, navigate]);
 
   // Voice recognition hook
   const { isListening, speak } = useVoiceRecognition({
@@ -66,9 +73,43 @@ const Checkout = () => {
     onVoiceCommand
   });
 
-  // Step navigation
-  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 5));
+  // Step navigation with proper flow
+  const nextStep = () => {
+    if (currentStep === 2 && selectedAddressIndex < 0) {
+      speak(language === 'hi' ? 'कृपया पहले पता चुनें।' : 'Please select an address first.');
+      return;
+    }
+    if (currentStep === 4 && !paymentMethod) {
+      speak(language === 'hi' ? 'कृपया भुगतान विधि चुनें।' : 'Please select a payment method.');
+      return;
+    }
+    
+    // Skip to step 6 for Cash on Delivery (no OTP needed)
+    if (currentStep === 4 && paymentMethod === 'Cash on Delivery') {
+      setCurrentStep(5);
+    } else if (currentStep === 5 && (paymentMethod === 'UPI' || paymentMethod === 'Card')) {
+      // Check if payment details are filled
+      if (paymentMethod === 'UPI' && !paymentDetails.upiAddress) {
+        speak(language === 'hi' ? 'कृपया UPI address डालें।' : 'Please enter UPI address.');
+        return;
+      }
+      if (paymentMethod === 'Card' && (!paymentDetails.cardNumber || !paymentDetails.cvv)) {
+        speak(language === 'hi' ? 'कृपया कार्ड की जानकारी डालें।' : 'Please enter card details.');
+        return;
+      }
+      setCurrentStep(6); // Go to OTP verification
+    } else {
+      setCurrentStep(prev => Math.min(prev + 1, 6));
+    }
+  };
+
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
+
+  // Cancel transaction
+  const cancelTransaction = () => {
+    clearCart();
+    navigate('/cart');
+  };
 
   // Complete order
   const completeOrder = () => {
@@ -127,6 +168,7 @@ const Checkout = () => {
               setAppliedDiscount(discount);
               setAppliedOfferCode(code);
             }}
+            onCancel={cancelTransaction}
           />
 
           <CheckoutNavigation

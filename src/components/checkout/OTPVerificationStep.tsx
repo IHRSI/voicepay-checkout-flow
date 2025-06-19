@@ -38,7 +38,7 @@ const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
-      utterance.rate = 1.2;
+      utterance.rate = 1.0;
       utterance.pitch = 1.0;
       window.speechSynthesis.speak(utterance);
     }
@@ -49,8 +49,8 @@ const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
 
     const timer = setTimeout(() => {
       const instructionText = language === 'hi' 
-        ? 'अपना ओटीपी नंबर बोलें। आप छह अंकों का ओटीपी एक साथ बोल सकते हैं या एक-एक करके।'
-        : 'Please speak your OTP number. You can say all six digits together or one by one.';
+        ? 'अपना ओटीपी नंबर बोलें। आप छह अंकों का ओटीपी एक साथ बोल सकते हैं या एक-एक करके। रद्द करने के लिए "कैंसल" कहें।'
+        : 'Please speak your OTP number. You can say all six digits together or one by one. Say "cancel" to cancel the transaction.';
       speak(instructionText);
     }, 500);
 
@@ -67,21 +67,47 @@ const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
         console.log('OTP transcript:', transcript);
         
         if (transcript.includes('cancel') || transcript.includes('रद्द') || transcript.includes('कैंसल')) {
-          speak(language === 'hi' ? 'पेमेंट रद्द की जा रही है।' : 'Payment being cancelled.');
+          speak(language === 'hi' ? 'लेनदेन रद्द की जा रही है।' : 'Transaction being cancelled.');
           setTimeout(onCancel, 1000);
           return;
         }
         
-        // Extract numbers from speech
-        const numbers = transcript.match(/\d+/g);
-        if (numbers) {
-          const otpValue = numbers.join('');
-          if (otpValue.length >= 4 && otpValue.length <= 6) {
-            onOtpChange(otpValue);
-            speak(language === 'hi' ? `ओटीपी ${otpValue} सेव किया गया।` : `OTP ${otpValue} saved.`);
-          } else {
-            speak(language === 'hi' ? 'कृपया छह अंकों का ओटीपी बोलें।' : 'Please speak six digit OTP.');
+        // Enhanced number extraction for both languages
+        let otpValue = '';
+        
+        // Handle Hindi numbers
+        const hindiNumbers: { [key: string]: string } = {
+          'शून्य': '0', 'एक': '1', 'दो': '2', 'तीन': '3', 'चार': '4',
+          'पांच': '5', 'छह': '6', 'सात': '7', 'आठ': '8', 'नौ': '9'
+        };
+        
+        // Handle English numbers
+        const englishNumbers: { [key: string]: string } = {
+          'zero': '0', 'one': '1', 'two': '2', 'three': '3', 'four': '4',
+          'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9'
+        };
+        
+        // First try direct digit extraction
+        const directNumbers = transcript.match(/\d+/g);
+        if (directNumbers) {
+          otpValue = directNumbers.join('');
+        } else {
+          // Try word to number conversion
+          const words = transcript.split(' ');
+          for (const word of words) {
+            if (hindiNumbers[word]) {
+              otpValue += hindiNumbers[word];
+            } else if (englishNumbers[word]) {
+              otpValue += englishNumbers[word];
+            }
           }
+        }
+        
+        if (otpValue.length >= 4 && otpValue.length <= 6) {
+          onOtpChange(otpValue);
+          speak(language === 'hi' ? `ओटीपी ${otpValue} सेव किया गया।` : `OTP ${otpValue} saved.`);
+        } else {
+          speak(language === 'hi' ? 'कृपया छह अंकों का ओटीपी बोलें।' : 'Please speak six digit OTP.');
         }
         
         setTimeout(() => {
@@ -202,7 +228,7 @@ const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
               </div>
               <p className="text-sm text-blue-700">
                 {language === 'hi' 
-                  ? `कृपया ${paymentMethod} भुगतान के लिए आपके पंजीकृत मोबाइल नंबर पर भेजा गया ওটিপি डালें।`
+                  ? `कृपया ${paymentMethod} भुगतान के लिए आपके पंजीकृत मोबाइल नंबर पर भेजा गया ओटीपी डालें।`
                   : `Please enter the OTP sent to your registered mobile number for ${paymentMethod} payment.`
                 }
               </p>
@@ -210,13 +236,13 @@ const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
             
             <div>
               <Label htmlFor="otp" className="text-gray-700 font-medium">
-                {language === 'hi' ? 'ওটিপি डালें' : 'Enter OTP'}
+                {language === 'hi' ? 'ओटीपी डालें' : 'Enter OTP'}
               </Label>
               <Input
                 id="otp"
                 value={otp}
                 onChange={(e) => onOtpChange(e.target.value)}
-                placeholder={language === 'hi' ? '6-अंकीय ওটিপি' : '6-digit OTP'}
+                placeholder={language === 'hi' ? '6-अंकीय ओटीपी' : '6-digit OTP'}
                 maxLength={6}
                 className="mt-1 border-gray-300 focus:border-purple-500 focus:ring-purple-500 text-center text-lg font-mono tracking-wider"
               />
@@ -228,7 +254,7 @@ const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
                 variant="outline"
                 className="flex-1 hover:bg-red-50 border-red-200 text-red-600"
               >
-                {language === 'hi' ? 'रद্ করें' : 'Cancel'}
+                {language === 'hi' ? 'रद्द करें' : 'Cancel'}
               </Button>
               {otp && otp.length >= 4 && (
                 <Button 
@@ -236,7 +262,7 @@ const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
                   className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
                 >
                   <CheckCircle className="h-5 w-5 mr-2" />
-                  {language === 'hi' ? 'भुगতान पूরा করें' : 'Complete Payment'}
+                  {language === 'hi' ? 'भुगतान पूरा करें' : 'Complete Payment'}
                 </Button>
               )}
             </div>

@@ -4,7 +4,8 @@ import { CartItem } from '@/types/product';
 import ProductOverview from './ProductOverview';
 import AddressStep from './AddressStep';
 import PaymentMethodStep from './PaymentMethodStep';
-import VerificationStep from './VerificationStep';
+import PaymentDetailsStep from './PaymentDetailsStep';
+import OTPVerificationStep from './OTPVerificationStep';
 import OffersSection from './OffersSection';
 
 interface CheckoutStepsProps {
@@ -32,6 +33,7 @@ interface CheckoutStepsProps {
   onOtpChange: (otp: string) => void;
   onCompleteOrder: () => void;
   onOfferApplied: (discount: number, code: string) => void;
+  onCancel: () => void;
 }
 
 const CheckoutSteps: React.FC<CheckoutStepsProps> = ({
@@ -53,7 +55,8 @@ const CheckoutSteps: React.FC<CheckoutStepsProps> = ({
   onPaymentDetailsChange,
   onOtpChange,
   onCompleteOrder,
-  onOfferApplied
+  onOfferApplied,
+  onCancel
 }) => {
   return (
     <div className="lg:col-span-3 space-y-6">
@@ -67,16 +70,6 @@ const CheckoutSteps: React.FC<CheckoutStepsProps> = ({
           isProcessing={isProcessing}
           onSwitchToManual={onSwitchToManual}
           onContinue={onNextStep}
-        />
-      )}
-
-      {/* Offers Section - Show after step 1 */}
-      {currentStep > 1 && (
-        <OffersSection
-          total={subtotal}
-          onOfferApplied={onOfferApplied}
-          voiceMode={voiceMode}
-          isListening={isListening}
         />
       )}
 
@@ -95,8 +88,19 @@ const CheckoutSteps: React.FC<CheckoutStepsProps> = ({
         />
       )}
 
-      {/* Step 3: Payment Method */}
+      {/* Step 3: Offers Section */}
       {currentStep === 3 && (
+        <OffersSection
+          total={subtotal}
+          onOfferApplied={onOfferApplied}
+          voiceMode={voiceMode}
+          isListening={isListening}
+          onContinue={onNextStep}
+        />
+      )}
+
+      {/* Step 4: Payment Method */}
+      {currentStep === 4 && (
         <PaymentMethodStep
           paymentMethod={paymentMethod}
           voiceMode={voiceMode}
@@ -108,20 +112,52 @@ const CheckoutSteps: React.FC<CheckoutStepsProps> = ({
         />
       )}
 
-      {/* Step 4 & 5: Payment Details & Verification */}
-      {(currentStep === 4 || currentStep === 5) && (
-        <VerificationStep
+      {/* Step 5: Payment Details */}
+      {currentStep === 5 && (paymentMethod === 'UPI' || paymentMethod === 'Card') && (
+        <PaymentDetailsStep
           paymentMethod={paymentMethod}
-          otp={otp}
-          voiceConfirmed={false}
           voiceMode={voiceMode}
           isListening={isListening}
           isProcessing={isProcessing}
           paymentDetails={paymentDetails}
           onPaymentDetailsChange={onPaymentDetailsChange}
+          onContinue={onNextStep}
+          onSwitchToManual={onSwitchToManual}
+        />
+      )}
+
+      {/* Step 5: Direct completion for COD */}
+      {currentStep === 5 && paymentMethod === 'Cash on Delivery' && (
+        <div className="space-y-4">
+          <div className="p-6 bg-green-50 rounded-lg border border-green-200 text-center">
+            <h3 className="text-xl font-semibold text-green-800 mb-2">
+              Cash on Delivery Selected
+            </h3>
+            <p className="text-green-700 mb-4">
+              Your order will be delivered to your address. Pay cash when you receive your items.
+            </p>
+            <button
+              onClick={onCompleteOrder}
+              className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg font-semibold"
+            >
+              Confirm Order
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 6: OTP Verification (only for UPI and Card) */}
+      {currentStep === 6 && (paymentMethod === 'UPI' || paymentMethod === 'Card') && (
+        <OTPVerificationStep
+          voiceMode={voiceMode}
+          isListening={isListening}
+          isProcessing={isProcessing}
+          otp={otp}
+          paymentMethod={paymentMethod}
           onOtpChange={onOtpChange}
-          onVoiceConfirm={() => {}}
           onCompleteOrder={onCompleteOrder}
+          onSwitchToManual={onSwitchToManual}
+          onCancel={onCancel}
         />
       )}
     </div>
