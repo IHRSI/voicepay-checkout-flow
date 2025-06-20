@@ -8,22 +8,37 @@ export const handleContinueCommands = ({
   paymentMethod,
   setCurrentStep
 }: Pick<VoiceCommandHandlerProps, 'transcript' | 'currentStep' | 'selectedAddressIndex' | 'paymentMethod' | 'setCurrentStep'>) => {
-  // Continue/Next commands - Auto proceed to next step
-  if (transcript.includes('continue') || transcript.includes('next') || transcript.includes('आगे') || transcript.includes('जारी') || transcript.includes('अगला')) {
+  const cleanTranscript = transcript.toLowerCase().trim();
+  console.log('Checking continue command:', cleanTranscript, 'Step:', currentStep);
+  
+  // Enhanced continue/next commands
+  if (cleanTranscript.includes('continue') || cleanTranscript.includes('next') || 
+      cleanTranscript.includes('आगे') || cleanTranscript.includes('जारी') || 
+      cleanTranscript.includes('अगला') || cleanTranscript === 'continue' || 
+      cleanTranscript === 'next') {
+    
+    console.log('Continue command detected for step:', currentStep);
+    
     if (currentStep === 1) {
+      console.log('Moving to step 2');
       setTimeout(() => setCurrentStep(2), 500);
     } else if (currentStep === 2 && selectedAddressIndex >= 0) {
+      console.log('Moving to step 3');
       setTimeout(() => setCurrentStep(3), 500);
     } else if (currentStep === 3) {
+      console.log('Moving to step 4');
       setTimeout(() => setCurrentStep(4), 500);
     } else if (currentStep === 4 && paymentMethod) {
+      console.log('Moving to step 5');
       setTimeout(() => setCurrentStep(5), 500);
     } else if (currentStep === 5 && paymentMethod === 'Cash on Delivery') {
+      console.log('Completing COD order');
       setTimeout(() => {
         const event = new CustomEvent('completeOrder');
         window.dispatchEvent(event);
       }, 500);
     } else if (currentStep === 5 && (paymentMethod === 'UPI' || paymentMethod === 'Card')) {
+      console.log('Moving to OTP step');
       setTimeout(() => setCurrentStep(6), 500);
     }
     return true;
@@ -36,15 +51,27 @@ export const handleAddressSelection = ({
   setSelectedAddressIndex,
   setCurrentStep
 }: Pick<VoiceCommandHandlerProps, 'transcript' | 'setSelectedAddressIndex' | 'setCurrentStep'>) => {
-  if (transcript.includes('address 1') || transcript.includes('पता 1') || transcript.includes('पहला') || transcript.includes('first') || transcript.includes('1')) {
+  const cleanTranscript = transcript.toLowerCase().trim();
+  console.log('Checking address selection:', cleanTranscript);
+  
+  if (cleanTranscript.includes('address 1') || cleanTranscript.includes('पता 1') || 
+      cleanTranscript.includes('पहला') || cleanTranscript.includes('first') || 
+      cleanTranscript === '1' || cleanTranscript === 'one') {
+    console.log('Selecting address 1');
     setSelectedAddressIndex(0);
     setTimeout(() => setCurrentStep(3), 1000);
     return true;
-  } else if (transcript.includes('address 2') || transcript.includes('पता 2') || transcript.includes('दूसरा') || transcript.includes('second') || transcript.includes('2')) {
+  } else if (cleanTranscript.includes('address 2') || cleanTranscript.includes('पता 2') || 
+             cleanTranscript.includes('दूसरा') || cleanTranscript.includes('second') || 
+             cleanTranscript === '2' || cleanTranscript === 'two') {
+    console.log('Selecting address 2');
     setSelectedAddressIndex(1);
     setTimeout(() => setCurrentStep(3), 1000);
     return true;
-  } else if (transcript.includes('address 3') || transcript.includes('पता 3') || transcript.includes('तीसरा') || transcript.includes('third') || transcript.includes('3')) {
+  } else if (cleanTranscript.includes('address 3') || cleanTranscript.includes('पता 3') || 
+             cleanTranscript.includes('तीसरा') || cleanTranscript.includes('third') || 
+             cleanTranscript === '3' || cleanTranscript === 'three') {
+    console.log('Selecting address 3');
     setSelectedAddressIndex(2);
     setTimeout(() => setCurrentStep(3), 1000);
     return true;
@@ -56,13 +83,24 @@ export const handleOfferSelection = ({
   transcript,
   setCurrentStep
 }: Pick<VoiceCommandHandlerProps, 'transcript' | 'setCurrentStep'>) => {
-  if (transcript.includes('offer 1') || transcript.includes('ऑफर 1') || transcript.includes('पहला') || transcript.includes('first') || transcript.includes('1')) {
+  const cleanTranscript = transcript.toLowerCase().trim();
+  console.log('Checking offer selection:', cleanTranscript);
+  
+  if (cleanTranscript.includes('offer 1') || cleanTranscript.includes('ऑफर 1') || 
+      cleanTranscript.includes('पहला') || cleanTranscript.includes('first') || 
+      cleanTranscript === '1') {
+    console.log('Selecting offer 1');
     setTimeout(() => setCurrentStep(4), 1000);
     return true;
-  } else if (transcript.includes('offer 2') || transcript.includes('ऑफर 2') || transcript.includes('दूसरा') || transcript.includes('second') || transcript.includes('2')) {
+  } else if (cleanTranscript.includes('offer 2') || cleanTranscript.includes('ऑफर 2') || 
+             cleanTranscript.includes('दूसरा') || cleanTranscript.includes('second') || 
+             cleanTranscript === '2') {
+    console.log('Selecting offer 2');
     setTimeout(() => setCurrentStep(4), 1000);
     return true;
-  } else if (transcript.includes('skip') || transcript.includes('छोड़') || transcript.includes('no offer') || transcript.includes('कोई ऑफर नहीं')) {
+  } else if (cleanTranscript.includes('skip') || cleanTranscript.includes('छोड़') || 
+             cleanTranscript.includes('no offer') || cleanTranscript.includes('कोई ऑफर नहीं')) {
+    console.log('Skipping offers');
     setTimeout(() => setCurrentStep(4), 1000);
     return true;
   }

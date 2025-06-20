@@ -18,16 +18,19 @@ const Home = () => {
 
   const handleVoiceCommand = (transcript: string) => {
     const isHindi = language === 'hi';
-    console.log('Home voice command:', transcript);
+    const cleanTranscript = transcript.toLowerCase().trim();
+    console.log('Home voice command:', cleanTranscript);
     
     // Navigation commands
-    if (transcript.includes('cart') || transcript.includes('कार्ट')) {
+    if (cleanTranscript.includes('cart') || cleanTranscript.includes('कार्ट') || cleanTranscript === 'cart') {
+      console.log('Going to cart');
       navigate('/cart');
       return;
     }
     
-    if (transcript.includes('checkout') || transcript.includes('चेकआउट')) {
+    if (cleanTranscript.includes('checkout') || cleanTranscript.includes('चेकआउट')) {
       if (cartItems.length > 0) {
+        console.log('Going to checkout');
         navigate('/checkout');
       } else {
         speak(isHindi ? 'कार्ट खाली है। पहले कुछ आइटम जोड़ें।' : 'Cart is empty. Add some items first.');
@@ -35,36 +38,43 @@ const Home = () => {
       return;
     }
 
-    if (transcript.includes('about') || transcript.includes('हमारे बारे')) {
+    if (cleanTranscript.includes('about') || cleanTranscript.includes('हमारे बारे')) {
+      console.log('Going to about');
       navigate('/about');
       return;
     }
 
-    if (transcript.includes('our aim') || transcript.includes('हमारा लक्ष्य')) {
+    if (cleanTranscript.includes('our aim') || cleanTranscript.includes('हमारा लक्ष्य')) {
+      console.log('Going to our aim');
       navigate('/our-aim');
       return;
     }
 
-    // Product addition commands
+    // Product addition commands -more flexible matching
     products.forEach((product, index) => {
-      const productNames = [
-        product.title.toLowerCase(),
-        `product ${index + 1}`,
-        `item ${index + 1}`,
-        `${index + 1}`
-      ];
+      const productNumber = index + 1;
+      const isProductMatch = 
+        cleanTranscript.includes(`product ${productNumber}`) ||
+        cleanTranscript.includes(`item ${productNumber}`) ||
+        cleanTranscript.includes(`${productNumber}`) ||
+        cleanTranscript.includes(product.title.toLowerCase()) ||
+        (isHindi && (
+          cleanTranscript.includes(`उत्पाद ${productNumber}`) ||
+          cleanTranscript.includes(`आइटम ${productNumber}`) ||
+          cleanTranscript.includes(`प्रोडक्ट ${productNumber}`)
+        ));
       
-      if (isHindi) {
-        productNames.push(`उत्पाद ${index + 1}`, `आइटम ${index + 1}`, `प्रोडक्ट ${index + 1}`);
-      }
+      const isAddCommand = 
+        cleanTranscript.includes('add') ||
+        cleanTranscript.includes('cart') ||
+        (isHindi && (
+          cleanTranscript.includes('जोड़') ||
+          cleanTranscript.includes('एड') ||
+          cleanTranscript.includes('कार्ट में')
+        ));
       
-      const addCommands = isHindi ? ['add', 'जोड़', 'एड', 'कार्ट में'] : ['add', 'cart'];
-      
-      const matchFound = productNames.some(name => 
-        transcript.includes(name)
-      ) && addCommands.some(cmd => transcript.includes(cmd));
-      
-      if (matchFound) {
+      if (isProductMatch && isAddCommand) {
+        console.log(`Adding product ${productNumber} to cart`);
         addToCart(product);
         
         const addedText = isHindi 
@@ -75,12 +85,14 @@ const Home = () => {
           duration: 2000,
           position: 'bottom-center'
         });
+        
+        speak(addedText);
         return;
       }
     });
 
     // Help command
-    if (transcript.includes('help') || transcript.includes('मदद') || transcript.includes('हेल्प')) {
+    if (cleanTranscript.includes('help') || cleanTranscript.includes('मदद') || cleanTranscript.includes('हेल्प')) {
       const helpText = isHindi
         ? 'आप कह सकते हैं: कार्ट, चेकआउट, अबाउट, या किसी उत्पाद को जोड़ने के लिए "प्रोडक्ट नंबर जोड़ें"।'
         : 'You can say: cart, checkout, about, our aim, or "add product number" to add products to cart.';
@@ -88,7 +100,7 @@ const Home = () => {
     }
   };
 
-  const { isListening, currentTranscript, awaitingConfirmation, speak } = useVoiceRecognition({
+  const { isListening, currentTranscript, speak } = useVoiceRecognition({
     voiceMode,
     currentStep: 1,
     onVoiceCommand: handleVoiceCommand
@@ -145,8 +157,8 @@ const Home = () => {
               <div className={`w-3 h-3 rounded-full ${isListening ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`}></div>
               <span className="text-blue-700 font-medium">
                 {language === 'hi' 
-                  ? (awaitingConfirmation ? 'पुष्टि की प्रतीक्षा...' : (isListening ? 'सुन रहा है...' : 'वॉयस मोड सक्रिय'))
-                  : (awaitingConfirmation ? 'Awaiting confirmation...' : (isListening ? 'Listening...' : 'Voice Mode Active'))
+                  ? (isListening ? 'सुन रहा है...' : 'वॉयस मोड सक्रिय')
+                  : (isListening ? 'Listening...' : 'Voice Mode Active')
                 }
               </span>
             </div>

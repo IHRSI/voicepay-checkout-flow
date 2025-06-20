@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Globe, Volume2 } from 'lucide-react';
@@ -12,120 +12,147 @@ interface LanguageSelectorProps {
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected }) => {
   const { setLanguage } = useLanguage();
   const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState<any>(null);
+  const [hasSpoken, setHasSpoken] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isProcessingRef = useRef(false);
 
   const speak = (text: string, lang: string = 'en-US') => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang;
-      utterance.rate = 0.9;
+      utterance.rate = 0.8;
       utterance.pitch = 1.0;
       utterance.volume = 0.9;
-      window.speechSynthesis.speak(utterance);
+      
+      return new Promise<void>((resolve) => {
+        utterance.onend = () => resolve();
+        utterance.onerror = () => resolve();
+        window.speechSynthesis.speak(utterance);
+      });
     }
+    return Promise.resolve();
+  };
+
+  const stopRecognition = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.abort();
+      recognitionRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setIsListening(false);
+  };
+
+  const startVoiceRecognition = () => {
+    if (isProcessingRef.current || !('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const rec = new SpeechRecognition();
+    
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.lang = 'en-US';
+
+    rec.onstart = () => {
+      console.log('Language selection listening started');
+      setIsListening(true);
+    };
+    
+    rec.onresult = (event: any) => {
+      if (isProcessingRef.current) return;
+      
+      const transcript = event.results[0][0].transcript.toLowerCase().trim();
+      console.log('Language selection transcript:', transcript);
+      
+      isProcessingRef.current = true;
+      
+      if (transcript.includes('english') || transcript.includes('इंग्लिश')) {
+        handleLanguageSelect('en');
+      } else if (transcript.includes('hindi') || transcript.includes('हिंदी')) {
+        handleLanguageSelect('hi');
+      } else {
+        isProcessingRef.current = false;
+        speak("Please say English or Hindi clearly. कृपया English या Hindi स्पष्ट रूप से कहें।");
+        
+        // Restart after feedback
+        timeoutRef.current = setTimeout(() => {
+          if (!isProcessingRef.current) {
+            startVoiceRecognition();
+          }
+        }, 3000);
+      }
+    };
+
+    rec.onerror = (event: any) => {
+      console.log('Language selection error:', event.error);
+      setIsListening(false);
+      
+      if (event.error !== 'aborted' && !isProcessingRef.current) {
+        timeoutRef.current = setTimeout(() => {
+          if (!isProcessingRef.current) {
+            startVoiceRecognition();
+          }
+        }, 2000);
+      }
+    };
+
+    rec.onend = () => {
+      setIsListening(false);
+      
+      if (!isProcessingRef.current) {
+        timeoutRef.current = setTimeout(() => {
+          if (!isProcessingRef.current) {
+            startVoiceRecognition();
+          }
+        }, 1500);
+      }
+    };
+
+    recognitionRef.current = rec;
+    rec.start();
   };
 
   useEffect(() => {
-    // Initial welcome message
-    const timer = setTimeout(() => {
-      speak("Welcome to VoicePay! नमस्ते VoicePay में आपका स्वागत है! Please choose your language. Say English for English or Hindi for Hindi. अपनी भाषा चुनें - English या Hindi कहें।");
-    }, 1000);
-
-    // Start voice recognition
-    const startListening = () => {
-      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        console.log('Speech recognition not supported');
-        return;
-      }
-
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const rec = new SpeechRecognition();
-      
-      rec.continuous = false; // Changed to false for stability
-      rec.interimResults = false;
-      rec.lang = 'en-US';
-
-      rec.onstart = () => {
-        setIsListening(true);
-        console.log('Language selection - listening started');
-      };
-      
-      rec.onresult = (event: any) => {
-        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
-        console.log('Language selection transcript:', transcript);
+    const initializeVoice = async () => {
+      if (!hasSpoken) {
+        setHasSpoken(true);
+        await speak("Welcome to VoicePay! Please choose your language. Say English for English or Hindi for Hindi. VoicePay में आपका स्वागत है! कृपया अपनी भाषा चुनें।");
         
-        // Enhanced language detection
-        if (transcript.includes('english') || transcript.includes('इंग्लिश') || transcript.includes('अंग्रेजी')) {
-          handleLanguageSelect('en');
-        } else if (transcript.includes('hindi') || transcript.includes('हिंदी') || transcript.includes('हिन्दी')) {
-          handleLanguageSelect('hi');
-        } else {
-          // Retry prompt
-          speak("Please say English or Hindi clearly. कृपया English या Hindi स्पष्ट रूप से कहें।");
-          // Restart listening
-          setTimeout(() => {
-            if (rec) {
-              rec.start();
-            }
-          }, 2000);
-        }
-      };
-
-      rec.onerror = (event: any) => {
-        console.log('Language selection error:', event.error);
-        setIsListening(false);
-        if (event.error !== 'aborted') {
-          setTimeout(() => {
-            if (rec) {
-              rec.start();
-            }
-          }, 2000);
-        }
-      };
-
-      rec.onend = () => {
-        setIsListening(false);
-        // Only restart if no language was selected
+        // Start voice recognition after welcome message
         setTimeout(() => {
-          if (rec) {
-            rec.start();
-          }
-        }, 1500);
-      };
-
-      setRecognition(rec);
-      setTimeout(() => rec.start(), 3000);
+          startVoiceRecognition();
+        }, 1000);
+      }
     };
 
-    const listenTimer = setTimeout(startListening, 2000);
+    initializeVoice();
 
     return () => {
-      clearTimeout(timer);
-      clearTimeout(listenTimer);
-      if (recognition) {
-        recognition.abort();
-      }
+      stopRecognition();
       window.speechSynthesis.cancel();
     };
   }, []);
 
-  const handleLanguageSelect = (lang: 'en' | 'hi') => {
-    if (recognition) {
-      recognition.abort();
-      setRecognition(null);
-    }
+  const handleLanguageSelect = async (lang: 'en' | 'hi') => {
+    stopRecognition();
+    isProcessingRef.current = true;
     
     setLanguage(lang);
     localStorage.setItem('voicepay-language', lang);
     
     if (lang === 'en') {
-      speak("English selected! Welcome to VoicePay. Starting your voice-powered shopping experience. Voice mode is automatically enabled for you.", 'en-US');
+      await speak("English selected! Welcome to VoicePay. Starting your shopping experience.", 'en-US');
     } else {
-      speak("Hindi चुनी गई! VoicePay में आपका स्वागत है। आपका वॉयस-पावर्ड शॉपिंग अनुभव शुरू हो रहा है। वॉयस मोड आपके लिए चालू कर दिया गया है।", 'hi-IN');
+      await speak("Hindi चुनी गई! VoicePay में आपका स्वागत है। आपका शॉपिंग अनुभव शुरू हो रहा है।", 'hi-IN');
     }
     
-    setTimeout(onLanguageSelected, 4000);
+    setTimeout(onLanguageSelected, 2000);
   };
 
   return (

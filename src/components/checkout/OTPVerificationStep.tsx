@@ -3,7 +3,6 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { useOTPVoiceRecognition } from '@/hooks/useOTPVoiceRecognition';
 import OTPVoiceInstructions from './OTPVoiceInstructions';
 import OTPSecurityInfo from './OTPSecurityInfo';
 import OTPManualInput from './OTPManualInput';
@@ -33,13 +32,6 @@ const OTPVerificationStep: React.FC<OTPVerificationStepProps> = ({
   onCancel
 }) => {
   const { language } = useLanguage();
-
-  // Initialize voice recognition for OTP
-  useOTPVoiceRecognition({
-    voiceMode,
-    onOtpChange,
-    onCancel
-  });
 
   return (
     <Card className="shadow-lg border-gray-200 bg-gradient-to-br from-purple-50 to-pink-50">
