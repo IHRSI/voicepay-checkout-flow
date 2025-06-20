@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -133,6 +132,16 @@ const Checkout = () => {
     navigate('/cart');
     return null;
   }
+
+  // Listen for order completion event from voice commands
+  useEffect(() => {
+    const handleCompleteOrder = () => {
+      completeOrder();
+    };
+
+    window.addEventListener('completeOrder', handleCompleteOrder);
+    return () => window.removeEventListener('completeOrder', handleCompleteOrder);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">

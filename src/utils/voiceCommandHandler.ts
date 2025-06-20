@@ -50,85 +50,82 @@ export const handleVoiceCommand = ({
     return;
   }
 
-  if (transcript.includes('about') || transcript.includes('हमारे बारे')) {
-    speak(isHindi ? 'अबाउट पेज पर जा रहे हैं।' : 'Going to about page.');
-    setTimeout(() => window.location.href = '/about', 1000);
-    return;
-  }
-
   // Global cancellation command
-  if (transcript.includes('cancel purchase') || transcript.includes('लेनदेन रद्द') || transcript.includes('खरीदारी रद्द') || transcript.includes('कैंसल')) {
-    speak(isHindi ? 'खरीदारी रद्द की जा रही है। कार्ट पेज पर जा रहे हैं।' : 'Purchase being cancelled. Going to cart page.');
+  if (transcript.includes('cancel') || transcript.includes('रद्द') || transcript.includes('कैंसल')) {
+    speak(isHindi ? 'खरीदारी रद्द की जा रही है।' : 'Purchase being cancelled.');
     setTimeout(() => window.location.href = '/cart', 1000);
     return;
   }
 
-  // Continue command
-  if (transcript.includes('continue') || transcript.includes('आगे') || transcript.includes('जारी')) {
+  // Continue/Next commands
+  if (transcript.includes('continue') || transcript.includes('next') || transcript.includes('आगे') || transcript.includes('जारी') || transcript.includes('अगला')) {
     if (currentStep === 2 && selectedAddressIndex >= 0) {
-      speak(isHindi ? 'अगले चरण पर जा रहे हैं।' : 'Moving to next step.');
+      speak(isHindi ? 'ऑफर्स देखने के लिए अगले चरण पर जा रहे हैं।' : 'Moving to offers section.');
       setCurrentStep(3);
     } else if (currentStep === 3) {
+      speak(isHindi ? 'भुगतान विधि चुनने के लिए आगे बढ़ रहे हैं।' : 'Moving to payment method selection.');
       setCurrentStep(4);
-      speak(isHindi ? 'भुगतान विधि चुनें।' : 'Choose payment method.');
+    } else if (currentStep === 4 && paymentMethod) {
+      speak(isHindi ? 'भुगतान विवरण के लिए आगे बढ़ रहे हैं।' : 'Moving to payment details.');
+      setCurrentStep(5);
+    } else if (currentStep === 5 && paymentMethod === 'Cash on Delivery') {
+      speak(isHindi ? 'ऑर्डर पूरा हो रहा है।' : 'Completing your order.');
+      // Complete COD order
+    } else if (currentStep === 5 && (paymentMethod === 'UPI' || paymentMethod === 'Card')) {
+      speak(isHindi ? 'OTP सत्यापन के लिए आगे बढ़ रहे हैं।' : 'Moving to OTP verification.');
+      setCurrentStep(6);
     }
     return;
   }
 
   // Address selection (Step 2)
   if (currentStep === 2) {
-    if (transcript.includes('address 1') || transcript.includes('पता 1') || transcript.includes('पहला')) {
+    if (transcript.includes('address 1') || transcript.includes('पता 1') || transcript.includes('पहला') || transcript.includes('first')) {
       setSelectedAddressIndex(0);
       speak(isHindi ? 'पहला पता चुना गया। आगे बढ़ने के लिए continue कहें।' : 'First address selected. Say continue to proceed.');
-    } else if (transcript.includes('address 2') || transcript.includes('पता 2') || transcript.includes('दूसरा')) {
+    } else if (transcript.includes('address 2') || transcript.includes('पता 2') || transcript.includes('दूसरा') || transcript.includes('second')) {
       setSelectedAddressIndex(1);
       speak(isHindi ? 'दूसरा पता चुना गया। आगे बढ़ने के लिए continue कहें।' : 'Second address selected. Say continue to proceed.');
-    } else if (transcript.includes('address 3') || transcript.includes('पता 3') || transcript.includes('तीसरा')) {
+    } else if (transcript.includes('address 3') || transcript.includes('पता 3') || transcript.includes('तीसरा') || transcript.includes('third')) {
       setSelectedAddressIndex(2);
       speak(isHindi ? 'तीसरा पता चुना गया। आगे बढ़ने के लिए continue कहें।' : 'Third address selected. Say continue to proceed.');
     }
   }
 
-  // Offers selection (Step 3)
+  // Offers selection (Step 3) - Auto proceed with offers
   else if (currentStep === 3) {
-    if (transcript.includes('offer 1') || transcript.includes('ऑफर 1') || transcript.includes('पहला ऑफर')) {
-      speak(isHindi ? 'पहला ऑफर लागू किया गया। 10% छूट मिली।' : 'First offer applied. 10% discount received.');
-      setCurrentStep(4);
-    } else if (transcript.includes('offer 2') || transcript.includes('ऑफर 2') || transcript.includes('दूसरा ऑफर')) {
-      speak(isHindi ? 'दूसरा ऑफर लागू किया गया। 15% छूट मिली।' : 'Second offer applied. 15% discount received.');
-      setCurrentStep(4);
-    } else if (transcript.includes('offer 3') || transcript.includes('ऑफर 3') || transcript.includes('तीसरा ऑफर')) {
-      speak(isHindi ? 'तीसरा ऑफर लागू किया गया। ₹50 छूट मिली।' : 'Third offer applied. ₹50 discount received.');
-      setCurrentStep(4);
-    } else if (transcript.includes('offer 4') || transcript.includes('ऑफर 4') || transcript.includes('चौथा ऑफर')) {
-      speak(isHindi ? 'चौथा ऑफर लागू किया गया। फ्री डिलीवरी मिली।' : 'Fourth offer applied. Free delivery received.');
-      setCurrentStep(4);
-    } else if (transcript.includes('skip') || transcript.includes('छोड़ें')) {
+    if (transcript.includes('offer 1') || transcript.includes('ऑफर 1') || transcript.includes('पहला') || transcript.includes('first')) {
+      speak(isHindi ? 'पहला ऑफर लागू किया गया। भुगतान विधि पर जा रहे हैं।' : 'First offer applied. Moving to payment method.');
+      setTimeout(() => setCurrentStep(4), 1000);
+    } else if (transcript.includes('offer 2') || transcript.includes('ऑफर 2') || transcript.includes('दूसरा') || transcript.includes('second')) {
+      speak(isHindi ? 'दूसरा ऑफर लागू किया गया। भुगतान विधि पर जा रहे हैं।' : 'Second offer applied. Moving to payment method.');
+      setTimeout(() => setCurrentStep(4), 1000);
+    } else if (transcript.includes('skip') || transcript.includes('छोड़') || transcript.includes('no offer') || transcript.includes('कोई ऑफर नहीं')) {
       speak(isHindi ? 'ऑफर छोड़ा गया। भुगतान विधि पर जा रहे हैं।' : 'Offers skipped. Moving to payment method.');
-      setCurrentStep(4);
+      setTimeout(() => setCurrentStep(4), 1000);
     }
   }
 
-  // Payment method selection (Step 4)
+  // Payment method selection (Step 4) - Auto proceed
   else if (currentStep === 4) {
     if (transcript.includes('upi') || transcript.includes('यूपीआई')) {
       setPaymentMethod('UPI');
-      speak(isHindi ? 'UPI चुना गया। अब अपना UPI पता बोलें।' : 'UPI selected. Now speak your UPI address.');
-      setCurrentStep(5);
+      speak(isHindi ? 'UPI चुना गया। अपना UPI पता बोलें।' : 'UPI selected. Please speak your UPI address.');
+      setTimeout(() => setCurrentStep(5), 1000);
     } else if (transcript.includes('card') || transcript.includes('कार्ड')) {
       setPaymentMethod('Card');
-      speak(isHindi ? 'कार्ड चुना गया। अब अपने कार्ड की जानकारी बोलें।' : 'Card selected. Now speak your card details.');
-      setCurrentStep(5);
-    } else if (transcript.includes('cash') || transcript.includes('cod') || transcript.includes('कैश')) {
+      speak(isHindi ? 'कार्ड चुना गया। कार्डधारक का नाम बोलें।' : 'Card selected. Please speak cardholder name.');
+      setTimeout(() => setCurrentStep(5), 1000);
+    } else if (transcript.includes('cash') || transcript.includes('cod') || transcript.includes('कैश') || transcript.includes('डिलीवरी पर भुगतान')) {
       setPaymentMethod('Cash on Delivery');
       speak(isHindi ? 'कैश ऑन डिलीवरी चुना गया। ऑर्डर पूरा करने के लिए confirm कहें।' : 'Cash on Delivery selected. Say confirm to complete order.');
-      setCurrentStep(5);
+      setTimeout(() => setCurrentStep(5), 1000);
     }
   }
   
-  // Payment details (Step 5)
+  // Payment details (Step 5) - Enhanced collection
   else if (currentStep === 5) {
-    if (paymentMethod === 'UPI' && !paymentDetails.upiAddress) {
+    if (paymentMethod === 'UPI') {
       // Enhanced UPI address extraction
       const upiPatterns = [
         /[\w\.-]+@[\w\.-]+/,
@@ -145,68 +142,62 @@ export const handleVoiceCommand = ({
       if (upiMatch) {
         setPaymentDetails(prev => ({ ...prev, upiAddress: upiMatch[0] }));
         speak(isHindi ? 'UPI पता सेव किया गया। OTP के लिए अगले चरण पर जा रहे हैं।' : 'UPI address saved. Moving to OTP verification.');
-        setTimeout(() => setCurrentStep(6), 1000);
+        setTimeout(() => setCurrentStep(6), 1500);
       } else {
-        speak(isHindi ? 'कृपया अपना UPI पता फिर से स्पष्ट रूप से बोलें।' : 'Please speak your UPI address again clearly.');
+        speak(isHindi ? 'UPI पता स्पष्ट नहीं मिला। कृपया फिर से बोलें।' : 'UPI address not clear. Please speak again.');
       }
-    } else if (paymentMethod === 'Card') {
-      // Enhanced card details handling
+    } 
+    
+    else if (paymentMethod === 'Card') {
       const numbers = transcript.match(/\d+/g);
-      if (numbers && numbers.length > 0) {
-        const allNumbers = numbers.join('');
-        
-        if (allNumbers.length === 16 && !paymentDetails.cardNumber) {
-          setPaymentDetails(prev => ({ ...prev, cardNumber: allNumbers }));
-          speak(isHindi ? 'कार्ड नंबर सेव किया गया। अब CVV बोलें।' : 'Card number saved. Now speak your CVV.');
-        } else if (allNumbers.length === 3 && paymentDetails.cardNumber && !paymentDetails.cvv) {
-          setPaymentDetails(prev => ({ ...prev, cvv: allNumbers }));
-          speak(isHindi ? 'CVV सेव किया गया। OTP के लिए अगले चरण पर जा रहे हैं।' : 'CVV saved. Moving to OTP verification.');
-          setTimeout(() => setCurrentStep(6), 1000);
-        }
-      }
       
-      // Handle cardholder name
+      // Collect card details sequentially
       if (!paymentDetails.cardHolderName && !transcript.match(/\d/)) {
         const nameWords = transcript.replace(/card holder|name|नाम|कार्ड धारक/gi, '').trim();
         if (nameWords.length > 2) {
           setPaymentDetails(prev => ({ ...prev, cardHolderName: nameWords }));
-          speak(isHindi ? 'कार्डधारक का नाम सेव किया गया।' : 'Cardholder name saved.');
+          speak(isHindi ? 'कार्डधारक का नाम सेव किया गया। अब कार्ड नंबर बोलें।' : 'Cardholder name saved. Now speak card number.');
+        }
+      }
+      
+      else if (numbers && !paymentDetails.cardNumber) {
+        const cardNumber = numbers.join('').replace(/\s/g, '');
+        if (cardNumber.length === 16) {
+          setPaymentDetails(prev => ({ ...prev, cardNumber: cardNumber }));
+          speak(isHindi ? 'कार्ड नंबर सेव किया गया। अब CVV बोलें।' : 'Card number saved. Now speak CVV.');
+        }
+      }
+      
+      else if (numbers && paymentDetails.cardNumber && !paymentDetails.cvv) {
+        const cvv = numbers.join('');
+        if (cvv.length === 3 || cvv.length === 4) {
+          setPaymentDetails(prev => ({ ...prev, cvv: cvv }));
+          speak(isHindi ? 'CVV सेव किया गया। OTP के लिए अगले चरण पर जा रहे हैं।' : 'CVV saved. Moving to OTP verification.');
+          setTimeout(() => setCurrentStep(6), 1500);
         }
       }
     }
   }
   
-  // OTP input (Step 6)
+  // OTP input (Step 6) - Enhanced OTP collection
   else if (currentStep === 6) {
-    // Enhanced OTP extraction for both languages
     const numbers = transcript.match(/\d+/g);
     if (numbers) {
       const otpValue = numbers.join('');
       if (otpValue.length >= 4 && otpValue.length <= 6) {
         setOtp(otpValue);
-        speak(isHindi ? `OTP ${otpValue} सेव किया गया। ऑर्डर पूरा करने के लिए confirm कहें।` : `OTP ${otpValue} saved. Say confirm to complete order.`);
+        speak(isHindi ? `OTP ${otpValue} सेव किया गया। confirm कहकर ऑर्डर पूरा करें।` : `OTP ${otpValue} saved. Say confirm to complete order.`);
       }
     }
     
-    // Handle word-to-number conversion for Hindi
-    if (isHindi) {
-      const hindiNumbers: { [key: string]: string } = {
-        'शून्य': '0', 'एक': '1', 'दो': '2', 'तीन': '3', 'चार': '4',
-        'पांच': '5', 'छह': '6', 'सात': '7', 'आठ': '8', 'नौ': '9'
-      };
-      
-      let otpFromWords = '';
-      const words = transcript.split(' ');
-      for (const word of words) {
-        if (hindiNumbers[word.trim()]) {
-          otpFromWords += hindiNumbers[word.trim()];
-        }
-      }
-      
-      if (otpFromWords.length >= 4 && otpFromWords.length <= 6) {
-        setOtp(otpFromWords);
-        speak(`OTP ${otpFromWords} सेव किया गया। ऑर्डर पूरा करने के लिए confirm कहें।`);
-      }
+    // Order confirmation
+    if (transcript.includes('confirm') || transcript.includes('पुष्टि') || transcript.includes('complete') || transcript.includes('पूरा')) {
+      speak(isHindi ? 'ऑर्डर पूरा हो रहा है। धन्यवाद!' : 'Completing your order. Thank you!');
+      // Trigger order completion
+      setTimeout(() => {
+        const event = new CustomEvent('completeOrder');
+        window.dispatchEvent(event);
+      }, 1000);
     }
   }
 };

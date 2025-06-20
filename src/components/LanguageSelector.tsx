@@ -19,7 +19,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang;
-      utterance.rate = 0.8;
+      utterance.rate = 0.9;
       utterance.pitch = 1.0;
       utterance.volume = 0.9;
       window.speechSynthesis.speak(utterance);
@@ -57,13 +57,9 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
         
         // Enhanced language detection
         if (transcript.includes('english') || transcript.includes('इंग्लिश') || transcript.includes('अंग्रेजी')) {
-          setLanguage('en');
-          speak("English selected! Welcome to VoicePay. Starting your voice-powered shopping experience.", 'en-US');
-          setTimeout(onLanguageSelected, 3000);
+          handleLanguageSelect('en');
         } else if (transcript.includes('hindi') || transcript.includes('हिंदी') || transcript.includes('हिन्दी')) {
-          setLanguage('hi');
-          speak("Hindi चुनी गई! VoicePay में आपका स्वागत है। आपका वॉयस-पावर्ड शॉपिंग अनुभव शुरू हो रहा है।", 'hi-IN');
-          setTimeout(onLanguageSelected, 3000);
+          handleLanguageSelect('hi');
         } else {
           // Retry prompt
           speak("Please say English or Hindi clearly. कृपया English या Hindi स्पष्ट रूप से कहें।");
@@ -106,7 +102,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
       }
       window.speechSynthesis.cancel();
     };
-  }, [setLanguage, onLanguageSelected]);
+  }, []);
 
   const handleLanguageSelect = (lang: 'en' | 'hi') => {
     if (recognition) {
@@ -116,12 +112,12 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
     setLanguage(lang);
     
     if (lang === 'en') {
-      speak("English selected! Welcome to VoicePay. Starting your voice-powered shopping experience.", 'en-US');
+      speak("English selected! Welcome to VoicePay. Starting your voice-powered shopping experience. Voice mode is automatically enabled for you.", 'en-US');
     } else {
-      speak("Hindi चुनी गई! VoicePay में आपका स्वागत है। आपका वॉयस-पावर्ड शॉपिंग अनुभव शुरू हो रहा है।", 'hi-IN');
+      speak("Hindi चुनी गई! VoicePay में आपका स्वागत है। आपका वॉयस-पावर्ड शॉपिंग अनुभव शुरू हो रहा है। वॉयस मोड आपके लिए चालू कर दिया गया है।", 'hi-IN');
     }
     
-    setTimeout(onLanguageSelected, 3000);
+    setTimeout(onLanguageSelected, 4000);
   };
 
   return (

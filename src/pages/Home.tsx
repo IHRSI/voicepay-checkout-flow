@@ -14,8 +14,8 @@ import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 const Home = () => {
   const navigate = useNavigate();
   const { addToCart, cartItems } = useCart();
-  const { language, t } = useLanguage();
-  const [voiceMode, setVoiceMode] = useState(false);
+  const { language } = useLanguage();
+  const [voiceMode, setVoiceMode] = useState(true); // Start with voice mode ON
 
   const handleVoiceCommand = (transcript: string) => {
     const isHindi = language === 'hi';
@@ -68,7 +68,6 @@ const Home = () => {
         
         speak(addedText);
         
-        // Show toast notification
         toast.success(addedText, {
           duration: 2000,
           position: 'bottom-center'
@@ -92,40 +91,24 @@ const Home = () => {
     onVoiceCommand: handleVoiceCommand
   });
 
-  // Initial welcome message
+  // Enhanced initial welcome message
   useEffect(() => {
     const timer = setTimeout(() => {
       const welcomeText = language === 'hi' 
-        ? 'VoicePay में आपका स्वागत है! भारत का सबसे सुलभ शॉपिंग प्लेटफॉर्म। वॉयस मोड चालू करने के लिए वॉयस बटन दबाएं।'
-        : 'Welcome to VoicePay! India\'s most accessible shopping platform. Click the voice button to enable voice mode.';
+        ? 'VoicePay में आपका स्वागत है! भारत का सबसे सुलभ शॉपिंग प्लेटफॉर्म। वॉयस मोड चालू है। आप कह सकते हैं - कार्ट, चेकआउट, या किसी उत्पाद को जोड़ने के लिए उसका नाम बोलें।'
+        : 'Welcome to VoicePay! India\'s most accessible shopping platform. Voice mode is active. You can say - cart, checkout, or speak product names to add items.';
       speak(welcomeText);
-    }, 1000);
+    }, 2000);
 
     return () => clearTimeout(timer);
-  }, [language]);
-
-  const handleAddToCart = (product: any) => {
-    addToCart(product);
-    
-    const addedText = language === 'hi' 
-      ? `${product.title} कार्ट में जोड़ा गया।`
-      : `${product.title} added to cart.`;
-    
-    speak(addedText);
-    
-    // Show toast notification
-    toast.success(addedText, {
-      duration: 2000,
-      position: 'bottom-center'
-    });
-  };
+  }, [language, speak]);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       
       <main className="container mx-auto px-4 py-8">
-        {/* Voice Mode Toggle */}
+        {/* Voice Mode Status */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">

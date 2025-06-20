@@ -18,14 +18,14 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       
-      // Set language-specific voice settings
+      // Enhanced language-specific voice settings
       if (language === 'hi') {
         utterance.lang = 'hi-IN';
-        utterance.rate = 0.8;
+        utterance.rate = 1.2; // Faster Hindi speech
         utterance.pitch = 1.0;
       } else {
         utterance.lang = 'en-IN';
-        utterance.rate = 0.9;
+        utterance.rate = 1.0;
         utterance.pitch = 1.1;
       }
       
@@ -35,16 +35,16 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
   }, [language]);
 
   useEffect(() => {
-    if (!voiceMode || currentStep === 1) return;
+    if (!voiceMode) return;
 
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const rec = new SpeechRecognition();
       
-      rec.continuous = false;
+      rec.continuous = true;
       rec.interimResults = false;
       
-      // Set language-specific recognition settings
+      // Enhanced language-specific recognition settings
       if (language === 'hi') {
         rec.lang = 'hi-IN';
       } else {
