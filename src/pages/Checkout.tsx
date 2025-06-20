@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
@@ -37,8 +38,9 @@ const Checkout = () => {
   const subtotal = getTotalPrice() * 80;
   const finalTotal = subtotal - appliedDiscount;
 
-  // Voice command handler
+  // Voice command handler with enhanced processing
   const onVoiceCommand = useCallback((transcript: string) => {
+    console.log('Checkout voice command received:', transcript);
     setIsProcessing(true);
     
     setTimeout(() => {
@@ -57,15 +59,70 @@ const Checkout = () => {
         setSelectedAddressIndex
       });
       setIsProcessing(false);
-    }, 1000);
+    }, 500);
   }, [currentStep, paymentMethod, paymentDetails, language, selectedAddressIndex]);
 
-  // Voice recognition hook
+  // Single voice recognition instance
   const { isListening, speak } = useVoiceRecognition({
     voiceMode,
     currentStep,
     onVoiceCommand
   });
+
+  // Initial checkout instructions
+  useEffect(() => {
+    if (!voiceMode) return;
+    
+    const timer = setTimeout(() => {
+      const isHindi = language === 'hi';
+      let instructionText = '';
+      
+      switch (currentStep) {
+        case 1:
+          instructionText = isHindi 
+            ? 'चेकआउट प्रक्रिया शुरू हो रही है। आगे बढ़ने के लिए "continue" कहें।'
+            : 'Checkout process starting. Say "continue" to proceed.';
+          break;
+        case 2:
+          instructionText = isHindi 
+            ? 'पता चुनें। "पता 1", "पता 2", या "पता 3" कहें।'
+            : 'Select address. Say "address 1", "address 2", or "address 3".';
+          break;
+        case 3:
+          instructionText = isHindi 
+            ? 'ऑफर चुनें। "ऑफर 1", "ऑफर 2", "ऑफर 3", "ऑफर 4" कहें या "continue" कहें।'
+            : 'Choose offer. Say "offer 1", "offer 2", "offer 3", "offer 4" or "continue".';
+          break;
+        case 4:
+          instructionText = isHindi 
+            ? 'भुगतान विधि चुनें। "UPI", "कार्ड", या "कैश ऑन डिलीवरी" कहें।'
+            : 'Choose payment method. Say "UPI", "card", or "cash on delivery".';
+          break;
+        case 5:
+          if (paymentMethod === 'UPI') {
+            instructionText = isHindi 
+              ? 'अपना UPI पता बोलें।'
+              : 'Speak your UPI address.';
+          } else if (paymentMethod === 'Card') {
+            instructionText = isHindi 
+              ? 'कार्ड होल्डर का नाम बोलें।'
+              : 'Speak card holder name.';
+          }
+          break;
+        case 6:
+          instructionText = isHindi 
+            ? 'अपना OTP बोलें।'
+            : 'Speak your OTP.';
+          break;
+      }
+      
+      if (instructionText) {
+        speak(instructionText);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [currentStep, voiceMode, language, paymentMethod, speak]);
 
   // Step navigation with proper flow
   const nextStep = () => {
@@ -80,7 +137,7 @@ const Checkout = () => {
       return;
     }
     
-    // Skip to step 6 for Cash on Delivery (no OTP needed)
+    // Skip to step 5 for Cash on Delivery (no OTP needed)
     if (currentStep === 4 && paymentMethod === 'Cash on Delivery') {
       setCurrentStep(5);
     } else if (currentStep === 5 && (paymentMethod === 'UPI' || paymentMethod === 'Card')) {
@@ -151,6 +208,27 @@ const Checkout = () => {
           isListening={isListening}
           onToggleVoiceMode={() => setVoiceMode(!voiceMode)}
         />
+
+        {/* Single Voice Status Display */}
+        {voiceMode && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-l-4 border-blue-400 shadow-sm text-center">
+            <div className="flex items-center justify-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${isListening ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`}></div>
+              <span className="text-blue-800 font-medium text-lg">
+                {language === 'hi' 
+                  ? (isProcessing ? 'प्रोसेसिंग...' : (isListening ? 'सुन रहा है...' : 'वॉयस मोड सक्रिय'))
+                  : (isProcessing ? 'Processing...' : (isListening ? 'Listening...' : 'Voice Mode Active'))
+                }
+              </span>
+            </div>
+            <p className="text-sm text-blue-700 mt-2">
+              {language === 'hi'
+                ? 'वॉयस कमांड के लिए स्पष्ट रूप से बोलें'
+                : 'Speak clearly for voice commands'
+              }
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <CheckoutSteps

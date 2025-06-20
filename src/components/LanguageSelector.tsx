@@ -42,9 +42,9 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const rec = new SpeechRecognition();
       
-      rec.continuous = true;
+      rec.continuous = false; // Changed to false for stability
       rec.interimResults = false;
-      rec.lang = 'en-US'; // Start with English for language detection
+      rec.lang = 'en-US';
 
       rec.onstart = () => {
         setIsListening(true);
@@ -63,29 +63,35 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
         } else {
           // Retry prompt
           speak("Please say English or Hindi clearly. कृपया English या Hindi स्पष्ट रूप से कहें।");
+          // Restart listening
+          setTimeout(() => {
+            if (rec) {
+              rec.start();
+            }
+          }, 2000);
         }
       };
 
       rec.onerror = (event: any) => {
-        console.error('Language selection error:', event.error);
+        console.log('Language selection error:', event.error);
         setIsListening(false);
         if (event.error !== 'aborted') {
           setTimeout(() => {
             if (rec) {
               rec.start();
             }
-          }, 1000);
+          }, 2000);
         }
       };
 
       rec.onend = () => {
         setIsListening(false);
-        // Restart listening after a short delay
+        // Only restart if no language was selected
         setTimeout(() => {
           if (rec) {
             rec.start();
           }
-        }, 1000);
+        }, 1500);
       };
 
       setRecognition(rec);
@@ -107,9 +113,11 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
   const handleLanguageSelect = (lang: 'en' | 'hi') => {
     if (recognition) {
       recognition.abort();
+      setRecognition(null);
     }
     
     setLanguage(lang);
+    localStorage.setItem('voicepay-language', lang);
     
     if (lang === 'en') {
       speak("English selected! Welcome to VoicePay. Starting your voice-powered shopping experience. Voice mode is automatically enabled for you.", 'en-US');
