@@ -19,7 +19,6 @@ const Checkout = () => {
   // State management
   const [currentStep, setCurrentStep] = useState(1);
   const [voiceMode, setVoiceMode] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
   
   // Form data
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(-1);
@@ -41,29 +40,25 @@ const Checkout = () => {
   // Voice command handler with enhanced processing
   const onVoiceCommand = useCallback((transcript: string) => {
     console.log('Checkout voice command received:', transcript);
-    setIsProcessing(true);
     
-    setTimeout(() => {
-      handleVoiceCommand({
-        transcript,
-        currentStep,
-        paymentMethod,
-        paymentDetails,
-        language,
-        setPaymentMethod,
-        setPaymentDetails,
-        setOtp,
-        setCurrentStep,
-        speak,
-        selectedAddressIndex,
-        setSelectedAddressIndex
-      });
-      setIsProcessing(false);
-    }, 500);
+    handleVoiceCommand({
+      transcript,
+      currentStep,
+      paymentMethod,
+      paymentDetails,
+      language,
+      setPaymentMethod,
+      setPaymentDetails,
+      setOtp,
+      setCurrentStep,
+      speak,
+      selectedAddressIndex,
+      setSelectedAddressIndex
+    });
   }, [currentStep, paymentMethod, paymentDetails, language, selectedAddressIndex]);
 
   // Single voice recognition instance
-  const { isListening, speak } = useVoiceRecognition({
+  const { isListening, currentTranscript, awaitingConfirmation, speak } = useVoiceRecognition({
     voiceMode,
     currentStep,
     onVoiceCommand
@@ -90,8 +85,8 @@ const Checkout = () => {
           break;
         case 3:
           instructionText = isHindi 
-            ? 'ऑफर चुनें। "ऑफर 1", "ऑफर 2", "ऑफर 3", "ऑफर 4" कहें या "continue" कहें।'
-            : 'Choose offer. Say "offer 1", "offer 2", "offer 3", "offer 4" or "continue".';
+            ? 'ऑफर चुनें। "ऑफर 1", "ऑफर 2" कहें या "continue" कहें।'
+            : 'Choose offer. Say "offer 1", "offer 2" or "continue".';
           break;
         case 4:
           instructionText = isHindi 
@@ -209,22 +204,32 @@ const Checkout = () => {
           onToggleVoiceMode={() => setVoiceMode(!voiceMode)}
         />
 
-        {/* Single Voice Status Display */}
+        {/* Enhanced Voice Status Display with Transcript */}
         {voiceMode && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-l-4 border-blue-400 shadow-sm text-center">
-            <div className="flex items-center justify-center gap-2">
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-l-4 border-blue-400 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
               <div className={`w-3 h-3 rounded-full ${isListening ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`}></div>
               <span className="text-blue-800 font-medium text-lg">
                 {language === 'hi' 
-                  ? (isProcessing ? 'प्रोसेसिंग...' : (isListening ? 'सुन रहा है...' : 'वॉयस मोड सक्रिय'))
-                  : (isProcessing ? 'Processing...' : (isListening ? 'Listening...' : 'Voice Mode Active'))
+                  ? (awaitingConfirmation ? 'पुष्टि की प्रतीक्षा...' : (isListening ? 'सुन रहा है...' : 'वॉयस मोड सक्रिय'))
+                  : (awaitingConfirmation ? 'Awaiting confirmation...' : (isListening ? 'Listening...' : 'Voice Mode Active'))
                 }
               </span>
             </div>
-            <p className="text-sm text-blue-700 mt-2">
+            
+            {currentTranscript && (
+              <div className="bg-white p-3 rounded-lg border mb-3 shadow-sm">
+                <span className="text-sm text-gray-600 block mb-1">
+                  {language === 'hi' ? 'आपने कहा:' : 'You said:'} 
+                </span>
+                <p className="font-medium text-gray-800">{currentTranscript}</p>
+              </div>
+            )}
+            
+            <p className="text-sm text-blue-700">
               {language === 'hi'
-                ? 'वॉयस कमांड के लिए स्पष्ट रूप से बोलें'
-                : 'Speak clearly for voice commands'
+                ? 'वॉयस कमांड के लिए स्पष्ट रूप से बोलें और पुष्टि करें'
+                : 'Speak clearly for voice commands and confirm'
               }
             </p>
           </div>
@@ -237,7 +242,7 @@ const Checkout = () => {
             getTotalPrice={getTotalPrice}
             voiceMode={voiceMode}
             isListening={isListening}
-            isProcessing={isProcessing}
+            isProcessing={false}
             selectedAddressIndex={selectedAddressIndex}
             paymentMethod={paymentMethod}
             paymentDetails={paymentDetails}

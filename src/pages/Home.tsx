@@ -22,15 +22,13 @@ const Home = () => {
     
     // Navigation commands
     if (transcript.includes('cart') || transcript.includes('कार्ट')) {
-      speak(isHindi ? 'कार्ट पेज पर जा रहे हैं।' : 'Going to cart page.');
-      setTimeout(() => navigate('/cart'), 1000);
+      navigate('/cart');
       return;
     }
     
     if (transcript.includes('checkout') || transcript.includes('चेकआउट')) {
       if (cartItems.length > 0) {
-        speak(isHindi ? 'चेकआउट पेज पर जा रहे हैं।' : 'Going to checkout page.');
-        setTimeout(() => navigate('/checkout'), 1000);
+        navigate('/checkout');
       } else {
         speak(isHindi ? 'कार्ट खाली है। पहले कुछ आइटम जोड़ें।' : 'Cart is empty. Add some items first.');
       }
@@ -38,18 +36,16 @@ const Home = () => {
     }
 
     if (transcript.includes('about') || transcript.includes('हमारे बारे')) {
-      speak(isHindi ? 'अबाउट पेज पर जा रहे हैं।' : 'Going to about page.');
-      setTimeout(() => navigate('/about'), 1000);
+      navigate('/about');
       return;
     }
 
     if (transcript.includes('our aim') || transcript.includes('हमारा लक्ष्य')) {
-      speak(isHindi ? 'हमारा लक्ष्य पेज पर जा रहे हैं।' : 'Going to our aim page.');
-      setTimeout(() => navigate('/our-aim'), 1000);
+      navigate('/our-aim');
       return;
     }
 
-    // Product addition commands - Enhanced pattern matching
+    // Product addition commands
     products.forEach((product, index) => {
       const productNames = [
         product.title.toLowerCase(),
@@ -75,8 +71,6 @@ const Home = () => {
           ? `${product.title} कार्ट में जोड़ा गया।`
           : `${product.title} added to cart.`;
         
-        speak(addedText);
-        
         toast.success(addedText, {
           duration: 2000,
           position: 'bottom-center'
@@ -88,13 +82,13 @@ const Home = () => {
     // Help command
     if (transcript.includes('help') || transcript.includes('मदद') || transcript.includes('हेल्प')) {
       const helpText = isHindi
-        ? 'आप कह सकते हैं: कार्ट, चेकआउट, अबाउट, या किसी उत्पाद को जोड़ने के लिए "प्रोडक्ट नंबर जोड़ें" या "आइटम नंबर एड करें"।'
-        : 'You can say: cart, checkout, about, our aim, or "add product number" or "add item number" to add products to cart.';
+        ? 'आप कह सकते हैं: कार्ट, चेकआउट, अबाउट, या किसी उत्पाद को जोड़ने के लिए "प्रोडक्ट नंबर जोड़ें"।'
+        : 'You can say: cart, checkout, about, our aim, or "add product number" to add products to cart.';
       speak(helpText);
     }
   };
 
-  const { isListening, speak } = useVoiceRecognition({
+  const { isListening, currentTranscript, awaitingConfirmation, speak } = useVoiceRecognition({
     voiceMode,
     currentStep: 1,
     onVoiceCommand: handleVoiceCommand
@@ -106,8 +100,8 @@ const Home = () => {
     
     const timer = setTimeout(() => {
       const welcomeText = language === 'hi' 
-        ? 'VoicePay में आपका स्वागत है! भारत का सबसे सुलभ शॉपिंग प्लेटफॉर्म। वॉयस मोड चालू है। आप कह सकते हैं - कार्ट, चेकआउट, अबाउट, या किसी उत्पाद को जोड़ने के लिए "प्रोडक्ट नंबर जोड़ें"।'
-        : 'Welcome to VoicePay! India\'s most accessible shopping platform. Voice mode is active. You can say - cart, checkout, about, our aim, or "add product number" to add items to your cart.';
+        ? 'VoicePay में आपका स्वागत है! आप कह सकते हैं - कार्ट, चेकआउट, अबाउट, या किसी उत्पाद को जोड़ने के लिए "प्रोडक्ट नंबर जोड़ें"।'
+        : 'Welcome to VoicePay! You can say - cart, checkout, about, our aim, or "add product number" to add items to your cart.';
       speak(welcomeText);
     }, 2000);
 
@@ -144,22 +138,32 @@ const Home = () => {
           </Button>
         </div>
 
-        {/* Voice Status */}
+        {/* Voice Status with Transcript */}
         {voiceMode && (
           <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center gap-2">
-              <Mic className={`h-5 w-5 ${isListening ? 'text-red-500 animate-pulse' : 'text-blue-500'}`} />
+            <div className="flex items-center gap-2 mb-2">
+              <div className={`w-3 h-3 rounded-full ${isListening ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`}></div>
               <span className="text-blue-700 font-medium">
                 {language === 'hi' 
-                  ? (isListening ? 'सुन रहा है...' : 'वॉयस मोड सक्रिय')
-                  : (isListening ? 'Listening...' : 'Voice Mode Active')
+                  ? (awaitingConfirmation ? 'पुष्टि की प्रतीक्षा...' : (isListening ? 'सुन रहा है...' : 'वॉयस मोड सक्रिय'))
+                  : (awaitingConfirmation ? 'Awaiting confirmation...' : (isListening ? 'Listening...' : 'Voice Mode Active'))
                 }
               </span>
             </div>
-            <p className="text-sm text-blue-600 mt-1">
+            
+            {currentTranscript && (
+              <div className="bg-white p-2 rounded border mb-2">
+                <span className="text-sm text-gray-600">
+                  {language === 'hi' ? 'आपने कहा:' : 'You said:'} 
+                </span>
+                <p className="font-medium">{currentTranscript}</p>
+              </div>
+            )}
+            
+            <p className="text-sm text-blue-600">
               {language === 'hi'
-                ? 'कहें: "कार्ट", "चेकआउट", "अबाउट", या "प्रोडक्ट 1 जोड़ें", "आइटम 2 एड करें"'
-                : 'Say: "cart", "checkout", "about", "our aim", or "add product 1", "add item 2"'
+                ? 'कहें: "कार्ट", "चेकआउट", "अबाउट", या "प्रोडक्ट 1 जोड़ें"'
+                : 'Say: "cart", "checkout", "about", "our aim", or "add product 1"'
               }
             </p>
           </div>
