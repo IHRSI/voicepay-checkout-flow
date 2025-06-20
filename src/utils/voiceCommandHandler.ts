@@ -2,7 +2,7 @@
 import { VoiceCommandHandlerProps } from '@/types/voiceCommand';
 import { handleNavigationCommands } from '@/utils/commands/navigationCommands';
 import { handleContinueCommands, handleAddressSelection, handleOfferSelection } from '@/utils/commands/checkoutCommands';
-import { handlePaymentMethodSelection, handlePaymentDetails, handleOTPInput } from '@/utils/commands/paymentCommands';
+import { handlePaymentMethodSelection, handlePaymentDetails, handleOTPVerification } from '@/utils/commands/paymentCommands';
 
 export const handleVoiceCommand = (props: VoiceCommandHandlerProps) => {
   const { transcript, currentStep } = props;
@@ -55,7 +55,7 @@ export const handleVoiceCommand = (props: VoiceCommandHandlerProps) => {
       
     case 6:
       // OTP verification
-      if (!handleOTPInput(props)) {
+      if (!handleOTPVerification(props)) {
         handleContinueCommands(props);
       }
       break;
