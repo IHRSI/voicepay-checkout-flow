@@ -1,96 +1,59 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Trash2, Plus, Minus, ShoppingBag, Star, Shield, Truck } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
-import { useLanguage } from '@/context/LanguageContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShoppingCart, Plus, Minus, Trash2, Mic, MicOff } from 'lucide-react';
-import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
+import { Card, CardContent } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 
 const Cart = () => {
+  const { cartItems, removeFromCart, updateQuantity, getTotalPrice } = useCart();
   const navigate = useNavigate();
-  const { cartItems, updateQuantity, removeFromCart, getTotalPrice, clearCart } = useCart();
-  const { language } = useLanguage();
-  const [voiceMode, setVoiceMode] = useState(true);
 
-  const handleVoiceCommand = (transcript: string) => {
-    const isHindi = language === 'hi';
-    const cleanTranscript = transcript.toLowerCase().trim();
-    console.log('Cart voice command:', cleanTranscript);
-    
-    // Navigation commands
-    if (cleanTranscript.includes('home') || cleanTranscript.includes('होम')) {
-      console.log('Going to home');
-      navigate('/');
-      return;
-    }
-    
-    if (cleanTranscript.includes('checkout') || cleanTranscript.includes('चेकआउट') ||
-        cleanTranscript.includes('proceed to buy') || cleanTranscript.includes('buy now')) {
-      if (cartItems.length > 0) {
-        console.log('Going to checkout');
-        navigate('/checkout');
-      } else {
-        speak(isHindi ? 'कार्ट खाली है।' : 'Cart is empty.');
-      }
-      return;
-    }
-
-    if (cleanTranscript.includes('about') || cleanTranscript.includes('हमारे बारे')) {
-      console.log('Going to about');
-      navigate('/about');
-      return;
-    }
-
-    if (cleanTranscript.includes('our aim') || cleanTranscript.includes('हमारा लक्ष्य')) {
-      console.log('Going to our aim');
-      navigate('/our-aim');
-      return;
-    }
-
-    // Cart management commands
-    if (cleanTranscript.includes('clear cart') || cleanTranscript.includes('empty cart') ||
-        cleanTranscript.includes('कार्ट खाली') || cleanTranscript.includes('सब हटा')) {
-      clearCart();
-      speak(isHindi ? 'कार्ट खाली कर दिया गया।' : 'Cart cleared.');
-      return;
-    }
-
-    // Help command
-    if (cleanTranscript.includes('help') || cleanTranscript.includes('मदद')) {
-      const helpText = isHindi
-        ? 'आप कह सकते हैं: होम, चेकआउट, अबाउट, हमारा लक्ष्य, या कार्ट खाली करें।'
-        : 'You can say: home, checkout, about, our aim, or clear cart.';
-      speak(helpText);
-    }
-  };
-
-  const { isListening, currentTranscript, speak } = useVoiceRecognition({
-    voiceMode,
-    currentStep: 1,
-    onVoiceCommand: handleVoiceCommand
-  });
-
-  // Welcome message
   useEffect(() => {
-    if (!voiceMode) return;
-    
-    const timer = setTimeout(() => {
-      const welcomeText = language === 'hi' 
-        ? 'आपका कार्ट। आप कह सकते हैं - होम, चेकआउट, अबाउट, हमारा लक्ष्य, या कार्ट खाली करें।'
-        : 'Your cart. You can say - home, checkout, about, our aim, or clear cart.';
-      speak(welcomeText);
-    }, 2000);
+    // Cancel any ongoing speech first
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
 
-    return () => clearTimeout(timer);
-  }, [language, speak, voiceMode]);
+    const speak = (text: string) => {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-IN';
+        utterance.rate = 2.2;
+        utterance.pitch = 1.1;
+        window.speechSynthesis.speak(utterance);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      if (cartItems.length > 0) {
+        // Create accurate product list with rupees
+        const productList = cartItems.map((item, index) => 
+          `${index + 1}. ${item.title}, quantity ${item.quantity}, price ${(item.price * item.quantity * 80).toFixed(0)} rupees`
+        ).join('. ');
+        
+        speak(`Your shopping cart. You have ${cartItems.length} items. ${productList}. Total amount is ${(getTotalPrice() * 80).toFixed(0)} rupees. Review your items and proceed to voice checkout when ready.`);
+      } else {
+        speak("Your shopping cart is empty. Browse our products to add items and experience India's most accessible checkout process.");
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+      // Cancel speech when component unmounts
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [cartItems, getTotalPrice]);
 
   if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto px-4">
           <div className="text-center py-16">
-            <ShoppingCart className="h-24 w-24 text-gray-400 mx-auto mb-4" />
+            <ShoppingBag className="h-24 w-24 text-gray-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Your VoicePay Cart is empty</h2>
             <p className="text-gray-600 mb-8">Shop today's deals and discover great products</p>
             <Button 

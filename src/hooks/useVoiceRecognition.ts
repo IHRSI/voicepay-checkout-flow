@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -14,57 +15,45 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
   
   const recognitionRef = useRef<any>(null);
   const isActiveRef = useRef(false);
+  const processingRef = useRef(false);
   const speechInProgressRef = useRef(false);
-  const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const speak = useCallback((text: string) => {
-    if ('speechSynthesis' in window && voiceMode) {
+    if ('speechSynthesis' in window) {
+      speechInProgressRef.current = true;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      if (language === 'hi') {
+        utterance.lang = 'hi-IN';
+        utterance.rate = 0.8;
+      } else {
+        utterance.lang = 'en-IN';
+        utterance.rate = 0.9;
+      }
+      
+      utterance.volume = 0.9;
+      
       return new Promise<void>((resolve) => {
-        speechInProgressRef.current = true;
-        
-        // Stop any ongoing speech
-        window.speechSynthesis.cancel();
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        
-        if (language === 'hi') {
-          utterance.lang = 'hi-IN';
-          utterance.rate = 0.8;
-        } else {
-          utterance.lang = 'en-IN';
-          utterance.rate = 0.9;
-        }
-        
-        utterance.volume = 0.9;
-        utterance.pitch = 1.0;
-        
         utterance.onend = () => {
           speechInProgressRef.current = false;
-          console.log('Speech synthesis ended');
           resolve();
         };
-        
         utterance.onerror = () => {
           speechInProgressRef.current = false;
-          console.log('Speech synthesis error');
           resolve();
         };
-        
         window.speechSynthesis.speak(utterance);
       });
     }
     speechInProgressRef.current = false;
     return Promise.resolve();
-  }, [language, voiceMode]);
+  }, [language]);
 
   const stopRecognition = useCallback(() => {
     console.log('Stopping voice recognition');
     isActiveRef.current = false;
-    
-    if (restartTimeoutRef.current) {
-      clearTimeout(restartTimeoutRef.current);
-      restartTimeoutRef.current = null;
-    }
+    processingRef.current = false;
     
     if (recognitionRef.current) {
       try {
@@ -80,9 +69,8 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
   }, []);
 
   const startRecognition = useCallback(() => {
-    // Don't start if not in voice mode, already active, or speech in progress
-    if (!voiceMode || isActiveRef.current || speechInProgressRef.current) {
-      console.log('Not starting recognition:', { voiceMode, isActive: isActiveRef.current, speechInProgress: speechInProgressRef.current });
+    // Don't start if speech is in progress or already active
+    if (!voiceMode || isActiveRef.current || processingRef.current || speechInProgressRef.current) {
       return;
     }
 
@@ -94,25 +82,21 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
     console.log('Starting voice recognition for step:', currentStep);
     
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
+    const rec = new SpeechRecognition();
     
-    // Key settings for continuous recognition
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
-    recognition.maxAlternatives = 1;
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
+    rec.maxAlternatives = 1;
 
-    recognition.onstart = () => {
+    rec.onstart = () => {
       console.log('Voice recognition started successfully');
       setIsListening(true);
       isActiveRef.current = true;
     };
     
-    recognition.onresult = (event: any) => {
-      if (!isActiveRef.current || speechInProgressRef.current) {
-        console.log('Ignoring result - not active or speech in progress');
-        return;
-      }
+    rec.onresult = (event: any) => {
+      if (processingRef.current || !isActiveRef.current || speechInProgressRef.current) return;
       
       let finalTranscript = '';
       let interimTranscript = '';
@@ -131,108 +115,85 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
       
       if (finalTranscript.trim()) {
         console.log('Processing final transcript:', finalTranscript.trim());
+        processingRef.current = true;
         
         // Process the command
         onVoiceCommand(finalTranscript.trim());
         
-        // Clear transcript after processing
+        // Clear transcript and reset processing after a delay
         setTimeout(() => {
           setCurrentTranscript('');
+          processingRef.current = false;
+        }, 1500);
+      }
+    };
+    
+    rec.onend = () => {
+      console.log('Voice recognition ended');
+      setIsListening(false);
+      
+      // Only restart if still in voice mode and not processing and no speech in progress
+      if (voiceMode && isActiveRef.current && !processingRef.current && !speechInProgressRef.current) {
+        setTimeout(() => {
+          if (voiceMode && isActiveRef.current && !processingRef.current && !speechInProgressRef.current) {
+            startRecognition();
+          }
+        }, 1000);
+      }
+    };
+    
+    rec.onerror = (event: any) => {
+      console.log('Voice recognition error:', event.error);
+      
+      if (event.error === 'no-speech' || event.error === 'audio-capture') {
+        setTimeout(() => {
+          if (voiceMode && isActiveRef.current && !processingRef.current && !speechInProgressRef.current) {
+            startRecognition();
+          }
+        }, 1500);
+      } else if (event.error !== 'aborted') {
+        setIsListening(false);
+        setTimeout(() => {
+          if (voiceMode && isActiveRef.current && !processingRef.current && !speechInProgressRef.current) {
+            startRecognition();
+          }
         }, 2000);
       }
     };
-    
-    recognition.onend = () => {
-      console.log('Voice recognition ended, restarting...');
-      setIsListening(false);
-      
-      // Always restart if voice mode is still active and no speech in progress
-      if (voiceMode && isActiveRef.current && !speechInProgressRef.current) {
-        restartTimeoutRef.current = setTimeout(() => {
-          if (voiceMode && isActiveRef.current && !speechInProgressRef.current) {
-            console.log('Restarting recognition after end');
-            startRecognition();
-          }
-        }, 500);
-      }
-    };
-    
-    recognition.onerror = (event: any) => {
-      console.log('Voice recognition error:', event.error);
-      
-      // Handle different error types
-      if (event.error === 'no-speech' || event.error === 'audio-capture') {
-        // These are recoverable errors, restart after a short delay
-        if (voiceMode && isActiveRef.current && !speechInProgressRef.current) {
-          restartTimeoutRef.current = setTimeout(() => {
-            if (voiceMode && isActiveRef.current && !speechInProgressRef.current) {
-              console.log('Restarting recognition after recoverable error');
-              startRecognition();
-            }
-          }, 1000);
-        }
-      } else if (event.error !== 'aborted') {
-        // Other errors, restart after longer delay
-        setIsListening(false);
-        if (voiceMode && isActiveRef.current && !speechInProgressRef.current) {
-          restartTimeoutRef.current = setTimeout(() => {
-            if (voiceMode && isActiveRef.current && !speechInProgressRef.current) {
-              console.log('Restarting recognition after error');
-              startRecognition();
-            }
-          }, 2000);
-        }
-      }
-    };
 
-    recognitionRef.current = recognition;
+    recognitionRef.current = rec;
     
     try {
-      recognition.start();
+      rec.start();
     } catch (error) {
       console.error('Failed to start recognition:', error);
       isActiveRef.current = false;
     }
   }, [voiceMode, language, currentStep, onVoiceCommand]);
 
-  // Effect to manage voice recognition lifecycle
+  // Main effect for managing voice recognition - delay start until after speech
   useEffect(() => {
     if (voiceMode) {
-      console.log('Voice mode enabled, waiting for speech to complete...');
-      
-      // Wait for speech to complete before starting recognition
-      const checkAndStart = () => {
-        if (!speechInProgressRef.current && voiceMode && !isActiveRef.current) {
-          console.log('Starting recognition after speech check');
+      // Wait longer before starting recognition to avoid capturing instructions
+      const timer = setTimeout(() => {
+        if (!speechInProgressRef.current) {
           startRecognition();
-        } else if (speechInProgressRef.current) {
-          console.log('Speech still in progress, checking again...');
-          setTimeout(checkAndStart, 1000);
         }
-      };
+      }, 3000); // Increased delay
       
-      // Initial delay to allow for any immediate speech
-      setTimeout(checkAndStart, 2000);
+      return () => {
+        clearTimeout(timer);
+      };
     } else {
       stopRecognition();
     }
-
-    return () => {
-      if (restartTimeoutRef.current) {
-        clearTimeout(restartTimeoutRef.current);
-      }
-    };
   }, [voiceMode, startRecognition, stopRecognition]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      console.log('useVoiceRecognition cleanup');
       stopRecognition();
       window.speechSynthesis.cancel();
-      if (restartTimeoutRef.current) {
-        clearTimeout(restartTimeoutRef.current);
-      }
     };
   }, [stopRecognition]);
 

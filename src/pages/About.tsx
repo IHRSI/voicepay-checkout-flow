@@ -1,75 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '@/context/LanguageContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Linkedin, Github, Mail, Heart, Shield, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Heart, Users, Shield, Mic, MicOff } from 'lucide-react';
-import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
+import { Card, CardContent } from '@/components/ui/card';
 
 const About = () => {
   const navigate = useNavigate();
-  const { language } = useLanguage();
-  const [voiceMode, setVoiceMode] = useState(true);
-
-  const handleVoiceCommand = (transcript: string) => {
-    const cleanTranscript = transcript.toLowerCase().trim();
-    console.log('About voice command:', cleanTranscript);
-    
-    // Navigation commands
-    if (cleanTranscript.includes('home') || cleanTranscript.includes('होम')) {
-      console.log('Going to home');
-      navigate('/');
-      return;
-    }
-    
-    if (cleanTranscript.includes('cart') || cleanTranscript.includes('कार्ट') ||
-        cleanTranscript.includes('card') || cleanTranscript.includes('shopping')) {
-      console.log('Going to cart');
-      navigate('/cart');
-      return;
-    }
-
-    if (cleanTranscript.includes('checkout') || cleanTranscript.includes('चेकआउट')) {
-      console.log('Going to checkout');
-      navigate('/checkout');
-      return;  
-    }
-
-    if (cleanTranscript.includes('our aim') || cleanTranscript.includes('हमारा लक्ष्य') ||
-        cleanTranscript.includes('aim') || cleanTranscript.includes('mission')) {
-      console.log('Going to our aim');
-      navigate('/our-aim');
-      return;
-    }
-
-    // Help command
-    if (cleanTranscript.includes('help') || cleanTranscript.includes('मदद')) {
-      const helpText = language === 'hi'
-        ? 'आप कह सकते हैं: होम, कार्ट, चेकआउट, या हमारा लक्ष्य।'
-        : 'You can say: home, cart, checkout, or our aim.';
-      speak(helpText);
-    }
-  };
-
-  const { isListening, currentTranscript, speak } = useVoiceRecognition({
-    voiceMode,
-    currentStep: 1,
-    onVoiceCommand: handleVoiceCommand
-  });
-
-  // Welcome message
-  useEffect(() => {
-    if (!voiceMode) return;
-    
-    const timer = setTimeout(() => {
-      const welcomeText = language === 'hi' 
-        ? 'हमारे बारे में पेज। आप कह सकते हैं - होम, कार्ट, चेकआउट, या हमारा लक्ष्य।'
-        : 'About us page. You can say - home, cart, checkout, or our aim.';
-      speak(welcomeText);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [language, speak, voiceMode]);
 
   const teamMembers = [
     {
@@ -136,6 +72,24 @@ const About = () => {
       avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face"
     }
   ];
+
+  useEffect(() => {
+    const speak = (text: string) => {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-IN';
+        utterance.rate = 0.8;
+        utterance.pitch = 1.1;
+        window.speechSynthesis.speak(utterance);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      speak("About VoicePay team. Meet the passionate individuals behind India's most inclusive payment platform. Learn about our story, values, and mission to transform digital payments for everyone.");
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50">
