@@ -16,9 +16,11 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
   const recognitionRef = useRef<any>(null);
   const isActiveRef = useRef(false);
   const processingRef = useRef(false);
+  const speechInProgressRef = useRef(false);
 
   const speak = useCallback((text: string) => {
     if ('speechSynthesis' in window) {
+      speechInProgressRef.current = true;
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       
@@ -33,11 +35,18 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
       utterance.volume = 0.9;
       
       return new Promise<void>((resolve) => {
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
+        utterance.onend = () => {
+          speechInProgressRef.current = false;
+          resolve();
+        };
+        utterance.onerror = () => {
+          speechInProgressRef.current = false;
+          resolve();
+        };
         window.speechSynthesis.speak(utterance);
       });
     }
+    speechInProgressRef.current = false;
     return Promise.resolve();
   }, [language]);
 
@@ -60,7 +69,8 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
   }, []);
 
   const startRecognition = useCallback(() => {
-    if (!voiceMode || isActiveRef.current || processingRef.current) {
+    // Don't start if speech is in progress or already active
+    if (!voiceMode || isActiveRef.current || processingRef.current || speechInProgressRef.current) {
       return;
     }
 
@@ -86,7 +96,7 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
     };
     
     rec.onresult = (event: any) => {
-      if (processingRef.current || !isActiveRef.current) return;
+      if (processingRef.current || !isActiveRef.current || speechInProgressRef.current) return;
       
       let finalTranscript = '';
       let interimTranscript = '';
@@ -110,11 +120,11 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
         // Process the command
         onVoiceCommand(finalTranscript.trim());
         
-        // Clear transcript and reset processing
+        // Clear transcript and reset processing after a delay
         setTimeout(() => {
           setCurrentTranscript('');
           processingRef.current = false;
-        }, 1000);
+        }, 1500);
       }
     };
     
@@ -122,13 +132,13 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
       console.log('Voice recognition ended');
       setIsListening(false);
       
-      // Only restart if still in voice mode and not processing
-      if (voiceMode && isActiveRef.current && !processingRef.current) {
+      // Only restart if still in voice mode and not processing and no speech in progress
+      if (voiceMode && isActiveRef.current && !processingRef.current && !speechInProgressRef.current) {
         setTimeout(() => {
-          if (voiceMode && isActiveRef.current && !processingRef.current) {
+          if (voiceMode && isActiveRef.current && !processingRef.current && !speechInProgressRef.current) {
             startRecognition();
           }
-        }, 500);
+        }, 1000);
       }
     };
     
@@ -136,16 +146,15 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
       console.log('Voice recognition error:', event.error);
       
       if (event.error === 'no-speech' || event.error === 'audio-capture') {
-        // Don't restart on these errors, just wait
         setTimeout(() => {
-          if (voiceMode && isActiveRef.current && !processingRef.current) {
+          if (voiceMode && isActiveRef.current && !processingRef.current && !speechInProgressRef.current) {
             startRecognition();
           }
-        }, 1000);
+        }, 1500);
       } else if (event.error !== 'aborted') {
         setIsListening(false);
         setTimeout(() => {
-          if (voiceMode && isActiveRef.current && !processingRef.current) {
+          if (voiceMode && isActiveRef.current && !processingRef.current && !speechInProgressRef.current) {
             startRecognition();
           }
         }, 2000);
@@ -162,13 +171,15 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
     }
   }, [voiceMode, language, currentStep, onVoiceCommand]);
 
-  // Main effect for managing voice recognition
+  // Main effect for managing voice recognition - delay start until after speech
   useEffect(() => {
     if (voiceMode) {
-      // Start recognition after a short delay
+      // Wait longer before starting recognition to avoid capturing instructions
       const timer = setTimeout(() => {
-        startRecognition();
-      }, 500);
+        if (!speechInProgressRef.current) {
+          startRecognition();
+        }
+      }, 3000); // Increased delay
       
       return () => {
         clearTimeout(timer);

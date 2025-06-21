@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,9 +18,11 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
   const recognitionRef = useRef<any>(null);
   const isActiveRef = useRef(false);
   const hasInitializedRef = useRef(false);
+  const speechInProgressRef = useRef(false);
 
   const speak = (text: string, lang: string = 'en-US') => {
     if ('speechSynthesis' in window && !isCompleted) {
+      speechInProgressRef.current = true;
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang;
@@ -30,11 +31,18 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
       utterance.volume = 0.9;
       
       return new Promise<void>((resolve) => {
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
+        utterance.onend = () => {
+          speechInProgressRef.current = false;
+          resolve();
+        };
+        utterance.onerror = () => {
+          speechInProgressRef.current = false;
+          resolve();
+        };
         window.speechSynthesis.speak(utterance);
       });
     }
+    speechInProgressRef.current = false;
     return Promise.resolve();
   };
 
@@ -56,7 +64,8 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
   };
 
   const startVoiceRecognition = () => {
-    if (isCompleted || isActiveRef.current || !('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    if (isCompleted || isActiveRef.current || speechInProgressRef.current || 
+        !('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       return;
     }
 
@@ -75,7 +84,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
     };
     
     rec.onresult = (event: any) => {
-      if (isCompleted || !isActiveRef.current) return;
+      if (isCompleted || !isActiveRef.current || speechInProgressRef.current) return;
       
       let finalTranscript = '';
       let interimTranscript = '';
@@ -110,13 +119,13 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
       console.log('Language selection ended');
       setIsListening(false);
       
-      // Only restart if not completed and still active
-      if (!isCompleted && isActiveRef.current) {
+      // Only restart if not completed and still active and no speech in progress
+      if (!isCompleted && isActiveRef.current && !speechInProgressRef.current) {
         setTimeout(() => {
-          if (!isCompleted && isActiveRef.current) {
+          if (!isCompleted && isActiveRef.current && !speechInProgressRef.current) {
             startVoiceRecognition();
           }
-        }, 500);
+        }, 1000);
       }
     };
 
@@ -124,16 +133,15 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
       console.log('Language selection error:', event.error);
       
       if (event.error === 'no-speech' || event.error === 'audio-capture') {
-        // Don't restart immediately on these errors
         setTimeout(() => {
-          if (!isCompleted && isActiveRef.current) {
+          if (!isCompleted && isActiveRef.current && !speechInProgressRef.current) {
             startVoiceRecognition();
           }
-        }, 1000);
+        }, 1500);
       } else if (event.error !== 'aborted') {
         setIsListening(false);
         setTimeout(() => {
-          if (!isCompleted && isActiveRef.current) {
+          if (!isCompleted && isActiveRef.current && !speechInProgressRef.current) {
             startVoiceRecognition();
           }
         }, 2000);
@@ -159,11 +167,12 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
         setHasSpoken(true);
         await speak("Welcome to VoicePay! Please choose your language. Say English for English or Hindi for Hindi. VoicePay में आपका स्वागत है! कृपया अपनी भाषा चुनें।");
         
+        // Wait longer after speech before starting recognition
         setTimeout(() => {
-          if (!isCompleted) {
+          if (!isCompleted && !speechInProgressRef.current) {
             startVoiceRecognition();
           }
-        }, 1000);
+        }, 2000);
       }
     };
 
@@ -192,7 +201,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
     
     // Ensure complete cleanup before proceeding
     window.speechSynthesis.cancel();
-    setTimeout(onLanguageSelected, 1000);
+    setTimeout(onLanguageSelected, 1500);
   };
 
   return (

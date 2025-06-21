@@ -11,10 +11,11 @@ export const handleContinueCommands = ({
   const cleanTranscript = transcript.toLowerCase().trim();
   console.log('Processing continue command:', cleanTranscript, 'for step:', currentStep);
   
-  // Continue/next commands
+  // Continue/next commands - more flexible matching
   if (cleanTranscript.includes('continue') || cleanTranscript.includes('next') || 
+      cleanTranscript.includes('proceed') || cleanTranscript.includes('go') ||
       cleanTranscript.includes('आगे') || cleanTranscript.includes('जारी') || 
-      cleanTranscript.includes('अगला')) {
+      cleanTranscript.includes('अगला') || cleanTranscript === 'ok' || cleanTranscript === 'okay') {
     
     console.log('Continue command detected, current step:', currentStep);
     
@@ -56,26 +57,34 @@ export const handleAddressSelection = ({
   const cleanTranscript = transcript.toLowerCase().trim();
   console.log('Processing address selection:', cleanTranscript);
   
-  if (cleanTranscript.includes('address 1') || cleanTranscript.includes('पता 1') || 
+  // Address 1 selection - case insensitive and more flexible
+  if (cleanTranscript.includes('address 1') || cleanTranscript.includes('address1') ||
+      cleanTranscript.includes('पता 1') || cleanTranscript.includes('पता1') ||
       cleanTranscript.includes('first') || cleanTranscript.includes('पहला') || 
-      cleanTranscript === '1' || cleanTranscript === 'one') {
+      cleanTranscript === '1' || cleanTranscript === 'one' || cleanTranscript.includes('first address')) {
     console.log('Selecting address 1');
     setSelectedAddressIndex(0);
-    setTimeout(() => setCurrentStep(3), 800);
+    setTimeout(() => setCurrentStep(3), 1000);
     return true;
-  } else if (cleanTranscript.includes('address 2') || cleanTranscript.includes('पता 2') || 
-             cleanTranscript.includes('second') || cleanTranscript.includes('दूसरा') || 
-             cleanTranscript === '2' || cleanTranscript === 'two') {
+  } 
+  // Address 2 selection
+  else if (cleanTranscript.includes('address 2') || cleanTranscript.includes('address2') ||
+           cleanTranscript.includes('पता 2') || cleanTranscript.includes('पता2') ||
+           cleanTranscript.includes('second') || cleanTranscript.includes('दूसरा') || 
+           cleanTranscript === '2' || cleanTranscript === 'two' || cleanTranscript.includes('second address')) {
     console.log('Selecting address 2');
     setSelectedAddressIndex(1);
-    setTimeout(() => setCurrentStep(3), 800);
+    setTimeout(() => setCurrentStep(3), 1000);
     return true;
-  } else if (cleanTranscript.includes('address 3') || cleanTranscript.includes('पता 3') || 
-             cleanTranscript.includes('third') || cleanTranscript.includes('तीसरा') || 
-             cleanTranscript === '3' || cleanTranscript === 'three') {
+  } 
+  // Address 3 selection
+  else if (cleanTranscript.includes('address 3') || cleanTranscript.includes('address3') ||
+           cleanTranscript.includes('पता 3') || cleanTranscript.includes('पता3') ||
+           cleanTranscript.includes('third') || cleanTranscript.includes('तीसरा') || 
+           cleanTranscript === '3' || cleanTranscript === 'three' || cleanTranscript.includes('third address')) {
     console.log('Selecting address 3');
     setSelectedAddressIndex(2);
-    setTimeout(() => setCurrentStep(3), 800);
+    setTimeout(() => setCurrentStep(3), 1000);
     return true;
   }
   return false;
@@ -88,22 +97,25 @@ export const handleOfferSelection = ({
   const cleanTranscript = transcript.toLowerCase().trim();
   console.log('Processing offer selection:', cleanTranscript);
   
-  if (cleanTranscript.includes('offer 1') || cleanTranscript.includes('ऑफर 1') || 
+  if (cleanTranscript.includes('offer 1') || cleanTranscript.includes('offer1') ||
+      cleanTranscript.includes('ऑफर 1') || cleanTranscript.includes('ऑफर1') ||
       cleanTranscript.includes('first') || cleanTranscript.includes('पहला') ||
-      cleanTranscript === '1') {
+      cleanTranscript === '1' || cleanTranscript.includes('voice')) {
     console.log('Selecting offer 1');
-    setTimeout(() => setCurrentStep(4), 800);
+    setTimeout(() => setCurrentStep(4), 1000);
     return true;
-  } else if (cleanTranscript.includes('offer 2') || cleanTranscript.includes('ऑफर 2') || 
+  } else if (cleanTranscript.includes('offer 2') || cleanTranscript.includes('offer2') ||
+             cleanTranscript.includes('ऑफर 2') || cleanTranscript.includes('ऑफर2') ||
              cleanTranscript.includes('second') || cleanTranscript.includes('दूसरा') ||
-             cleanTranscript === '2') {
+             cleanTranscript === '2' || cleanTranscript.includes('upi')) {
     console.log('Selecting offer 2');
-    setTimeout(() => setCurrentStep(4), 800);
+    setTimeout(() => setCurrentStep(4), 1000);
     return true;
   } else if (cleanTranscript.includes('skip') || cleanTranscript.includes('छोड़') || 
-             cleanTranscript.includes('no offer') || cleanTranscript.includes('कोई ऑफर नहीं')) {
+             cleanTranscript.includes('no offer') || cleanTranscript.includes('कोई ऑफर नहीं') ||
+             cleanTranscript.includes('continue') || cleanTranscript.includes('next')) {
     console.log('Skipping offers');
-    setTimeout(() => setCurrentStep(4), 800);
+    setTimeout(() => setCurrentStep(4), 1000);
     return true;
   }
   return false;

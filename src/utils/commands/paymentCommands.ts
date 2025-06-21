@@ -9,22 +9,25 @@ export const handlePaymentMethodSelection = ({
   const cleanTranscript = transcript.toLowerCase().trim();
   console.log('Processing payment method selection:', cleanTranscript);
   
-  if (cleanTranscript.includes('upi') || cleanTranscript.includes('यूपीआई')) {
+  if (cleanTranscript.includes('upi') || cleanTranscript.includes('यूपीआई') || 
+      cleanTranscript.includes('u p i') || cleanTranscript.includes('google pay') ||
+      cleanTranscript.includes('phonepe') || cleanTranscript.includes('paytm')) {
     console.log('Selecting UPI payment method');
     setPaymentMethod('UPI');
-    setTimeout(() => setCurrentStep(5), 800);
+    setTimeout(() => setCurrentStep(5), 1000);
     return true;
-  } else if (cleanTranscript.includes('card') || cleanTranscript.includes('कार्ड')) {
+  } else if (cleanTranscript.includes('card') || cleanTranscript.includes('कार्ड') ||
+             cleanTranscript.includes('credit') || cleanTranscript.includes('debit')) {
     console.log('Selecting Card payment method');
     setPaymentMethod('Card');
-    setTimeout(() => setCurrentStep(5), 800);
+    setTimeout(() => setCurrentStep(5), 1000);
     return true;
   } else if (cleanTranscript.includes('cash') || cleanTranscript.includes('cod') || 
              cleanTranscript.includes('कैश') || cleanTranscript.includes('डिलीवरी पर भुगतान') ||
-             cleanTranscript.includes('cash on delivery')) {
+             cleanTranscript.includes('cash on delivery') || cleanTranscript.includes('delivery')) {
     console.log('Selecting Cash on Delivery');
     setPaymentMethod('Cash on Delivery');
-    setTimeout(() => setCurrentStep(5), 800);
+    setTimeout(() => setCurrentStep(5), 1000);
     return true;
   }
   return false;
@@ -56,7 +59,7 @@ export const handlePaymentDetails = ({
     if (upiMatch) {
       console.log('UPI address captured:', upiMatch[0]);
       setPaymentDetails(prev => ({ ...prev, upiAddress: upiMatch[0] }));
-      setTimeout(() => setCurrentStep(6), 800);
+      setTimeout(() => setCurrentStep(6), 1000);
       return true;
     }
   } 
@@ -87,7 +90,7 @@ export const handlePaymentDetails = ({
       if (cvv.length === 3 || cvv.length === 4) {
         console.log('CVV captured, moving to OTP');
         setPaymentDetails(prev => ({ ...prev, cvv: cvv }));
-        setTimeout(() => setCurrentStep(6), 800);
+        setTimeout(() => setCurrentStep(6), 1000);
         return true;
       }
     }
@@ -95,7 +98,8 @@ export const handlePaymentDetails = ({
   
   else if (paymentMethod === 'Cash on Delivery') {
     if (cleanTranscript.includes('confirm') || cleanTranscript.includes('पुष्टि') || 
-        cleanTranscript.includes('complete') || cleanTranscript.includes('पूरा')) {
+        cleanTranscript.includes('complete') || cleanTranscript.includes('पूरा') ||
+        cleanTranscript.includes('place order') || cleanTranscript.includes('continue')) {
       console.log('Confirming COD order');
       const event = new CustomEvent('completeOrder');
       window.dispatchEvent(event);
@@ -124,7 +128,8 @@ export const handleOTPVerification = ({
   }
   
   if (cleanTranscript.includes('confirm') || cleanTranscript.includes('पुष्टि') || 
-      cleanTranscript.includes('complete') || cleanTranscript.includes('पूरा')) {
+      cleanTranscript.includes('complete') || cleanTranscript.includes('पूरा') ||
+      cleanTranscript.includes('verify') || cleanTranscript.includes('place order')) {
     console.log('Confirming order with OTP');
     const event = new CustomEvent('completeOrder');
     window.dispatchEvent(event);
