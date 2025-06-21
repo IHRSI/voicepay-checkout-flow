@@ -14,9 +14,10 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
   const [isListening, setIsListening] = useState(false);
   const [hasSpoken, setHasSpoken] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [currentTranscript, setCurrentTranscript] = useState('');
+  
   const recognitionRef = useRef<any>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isProcessingRef = useRef(false);
+  const isActiveRef = useRef(false);
   const hasInitializedRef = useRef(false);
 
   const speak = (text: string, lang: string = 'en-US') => {
@@ -39,19 +40,23 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
 
   const stopRecognition = () => {
     console.log('Stopping language selector recognition');
+    isActiveRef.current = false;
+    
     if (recognitionRef.current) {
-      recognitionRef.current.abort();
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.log('Error stopping language recognition:', e);
+      }
       recognitionRef.current = null;
     }
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
+    
     setIsListening(false);
+    setCurrentTranscript('');
   };
 
   const startVoiceRecognition = () => {
-    if (isProcessingRef.current || isCompleted || !('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    if (isCompleted || isActiveRef.current || !('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       return;
     }
 
@@ -59,51 +64,45 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const rec = new SpeechRecognition();
     
-    rec.continuous = false;
-    rec.interimResults = false;
+    rec.continuous = true;
+    rec.interimResults = true;
     rec.lang = 'en-US';
 
     rec.onstart = () => {
       console.log('Language selection listening started');
       setIsListening(true);
+      isActiveRef.current = true;
     };
     
     rec.onresult = (event: any) => {
-      if (isProcessingRef.current || isCompleted) return;
+      if (isCompleted || !isActiveRef.current) return;
       
-      const transcript = event.results[0][0].transcript.toLowerCase().trim();
-      console.log('Language selection transcript:', transcript);
+      let finalTranscript = '';
+      let interimTranscript = '';
       
-      isProcessingRef.current = true;
-      stopRecognition();
-      
-      if (transcript.includes('english') || transcript.includes('इंग्लिश')) {
-        handleLanguageSelect('en');
-      } else if (transcript.includes('hindi') || transcript.includes('हिंदी')) {
-        handleLanguageSelect('hi');
-      } else {
-        console.log('Language not recognized, restarting...');
-        isProcessingRef.current = false;
-        speak("Please say English or Hindi clearly. कृपया English या Hindi स्पष्ट रूप से कहें।");
-        
-        timeoutRef.current = setTimeout(() => {
-          if (!isProcessingRef.current && !isCompleted) {
-            startVoiceRecognition();
-          }
-        }, 3000);
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
       }
-    };
-
-    rec.onerror = (event: any) => {
-      console.log('Language selection error:', event.error);
-      setIsListening(false);
       
-      if (event.error !== 'aborted' && !isProcessingRef.current && !isCompleted) {
-        timeoutRef.current = setTimeout(() => {
-          if (!isProcessingRef.current && !isCompleted) {
-            startVoiceRecognition();
-          }
-        }, 2000);
+      const displayTranscript = finalTranscript || interimTranscript;
+      setCurrentTranscript(displayTranscript);
+      
+      if (finalTranscript.trim()) {
+        const transcript = finalTranscript.toLowerCase().trim();
+        console.log('Language selection transcript:', transcript);
+        
+        if (transcript.includes('english') || transcript.includes('इंग्लिश')) {
+          handleLanguageSelect('en');
+        } else if (transcript.includes('hindi') || transcript.includes('हिंदी')) {
+          handleLanguageSelect('hi');
+        }
+        
+        setCurrentTranscript('');
       }
     };
 
@@ -111,21 +110,48 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
       console.log('Language selection ended');
       setIsListening(false);
       
-      if (!isProcessingRef.current && !isCompleted) {
-        timeoutRef.current = setTimeout(() => {
-          if (!isProcessingRef.current && !isCompleted) {
+      // Only restart if not completed and still active
+      if (!isCompleted && isActiveRef.current) {
+        setTimeout(() => {
+          if (!isCompleted && isActiveRef.current) {
             startVoiceRecognition();
           }
-        }, 1500);
+        }, 500);
+      }
+    };
+
+    rec.onerror = (event: any) => {
+      console.log('Language selection error:', event.error);
+      
+      if (event.error === 'no-speech' || event.error === 'audio-capture') {
+        // Don't restart immediately on these errors
+        setTimeout(() => {
+          if (!isCompleted && isActiveRef.current) {
+            startVoiceRecognition();
+          }
+        }, 1000);
+      } else if (event.error !== 'aborted') {
+        setIsListening(false);
+        setTimeout(() => {
+          if (!isCompleted && isActiveRef.current) {
+            startVoiceRecognition();
+          }
+        }, 2000);
       }
     };
 
     recognitionRef.current = rec;
-    rec.start();
+    
+    try {
+      rec.start();
+    } catch (error) {
+      console.error('Failed to start language recognition:', error);
+      isActiveRef.current = false;
+    }
   };
 
   useEffect(() => {
-    if (hasInitializedRef.current) return;
+    if (hasInitializedRef.current || isCompleted) return;
     hasInitializedRef.current = true;
 
     const initializeVoice = async () => {
@@ -154,7 +180,6 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
     console.log('Language selected:', lang);
     setIsCompleted(true);
     stopRecognition();
-    isProcessingRef.current = true;
     
     setLanguage(lang);
     localStorage.setItem('voicepay-language', lang);
@@ -188,6 +213,14 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
                 {isListening ? 'Listening for your choice...' : 'Voice Ready'}
               </span>
             </div>
+            
+            {currentTranscript && (
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
+                <span className="text-sm text-blue-600">You said:</span>
+                <p className="font-medium text-blue-800">{currentTranscript}</p>
+              </div>
+            )}
+            
             <p className="text-gray-600 mb-6">
               Speak your choice or click below<br />
               अपनी पसंद बोलें या नीचे क्लिक करें

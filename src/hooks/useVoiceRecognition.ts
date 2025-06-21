@@ -16,7 +16,6 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
   const recognitionRef = useRef<any>(null);
   const isActiveRef = useRef(false);
   const processingRef = useRef(false);
-  const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const speak = useCallback((text: string) => {
     if ('speechSynthesis' in window) {
@@ -42,23 +41,18 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
     return Promise.resolve();
   }, [language]);
 
-  const cleanupRecognition = useCallback(() => {
-    console.log('Cleaning up voice recognition');
+  const stopRecognition = useCallback(() => {
+    console.log('Stopping voice recognition');
     isActiveRef.current = false;
     processingRef.current = false;
     
     if (recognitionRef.current) {
       try {
-        recognitionRef.current.abort();
+        recognitionRef.current.stop();
       } catch (e) {
-        console.log('Error aborting recognition:', e);
+        console.log('Error stopping recognition:', e);
       }
       recognitionRef.current = null;
-    }
-    
-    if (restartTimeoutRef.current) {
-      clearTimeout(restartTimeoutRef.current);
-      restartTimeoutRef.current = null;
     }
     
     setIsListening(false);
@@ -67,7 +61,6 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
 
   const startRecognition = useCallback(() => {
     if (!voiceMode || isActiveRef.current || processingRef.current) {
-      console.log('Recognition not started:', { voiceMode, isActive: isActiveRef.current, processing: processingRef.current });
       return;
     }
 
@@ -81,7 +74,7 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const rec = new SpeechRecognition();
     
-    rec.continuous = false;
+    rec.continuous = true;
     rec.interimResults = true;
     rec.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
     rec.maxAlternatives = 1;
@@ -114,26 +107,13 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
         console.log('Processing final transcript:', finalTranscript.trim());
         processingRef.current = true;
         
-        // Stop current recognition
-        if (recognitionRef.current) {
-          recognitionRef.current.abort();
-        }
-        
         // Process the command
         onVoiceCommand(finalTranscript.trim());
         
-        // Clear and restart after processing
+        // Clear transcript and reset processing
         setTimeout(() => {
           setCurrentTranscript('');
           processingRef.current = false;
-          
-          if (voiceMode && isActiveRef.current) {
-            restartTimeoutRef.current = setTimeout(() => {
-              if (voiceMode && isActiveRef.current && !processingRef.current) {
-                startRecognition();
-              }
-            }, 2000);
-          }
         }, 1000);
       }
     };
@@ -142,21 +122,29 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
       console.log('Voice recognition ended');
       setIsListening(false);
       
+      // Only restart if still in voice mode and not processing
       if (voiceMode && isActiveRef.current && !processingRef.current) {
-        restartTimeoutRef.current = setTimeout(() => {
+        setTimeout(() => {
           if (voiceMode && isActiveRef.current && !processingRef.current) {
             startRecognition();
           }
-        }, 1000);
+        }, 500);
       }
     };
     
     rec.onerror = (event: any) => {
       console.log('Voice recognition error:', event.error);
-      setIsListening(false);
       
-      if (event.error !== 'aborted' && voiceMode && isActiveRef.current && !processingRef.current) {
-        restartTimeoutRef.current = setTimeout(() => {
+      if (event.error === 'no-speech' || event.error === 'audio-capture') {
+        // Don't restart on these errors, just wait
+        setTimeout(() => {
+          if (voiceMode && isActiveRef.current && !processingRef.current) {
+            startRecognition();
+          }
+        }, 1000);
+      } else if (event.error !== 'aborted') {
+        setIsListening(false);
+        setTimeout(() => {
           if (voiceMode && isActiveRef.current && !processingRef.current) {
             startRecognition();
           }
@@ -177,6 +165,7 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
   // Main effect for managing voice recognition
   useEffect(() => {
     if (voiceMode) {
+      // Start recognition after a short delay
       const timer = setTimeout(() => {
         startRecognition();
       }, 500);
@@ -185,17 +174,17 @@ export const useVoiceRecognition = ({ voiceMode, currentStep, onVoiceCommand }: 
         clearTimeout(timer);
       };
     } else {
-      cleanupRecognition();
+      stopRecognition();
     }
-  }, [voiceMode, startRecognition, cleanupRecognition]);
+  }, [voiceMode, startRecognition, stopRecognition]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      cleanupRecognition();
+      stopRecognition();
       window.speechSynthesis.cancel();
     };
-  }, [cleanupRecognition]);
+  }, [stopRecognition]);
 
   return {
     isListening,
