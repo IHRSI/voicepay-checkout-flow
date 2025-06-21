@@ -1,17 +1,17 @@
 
 export const handleNavigationCommands = (transcript: string) => {
   const cleanTranscript = transcript.toLowerCase().trim();
-  console.log('Checking navigation command:', cleanTranscript);
+  console.log('Processing navigation command:', cleanTranscript);
   
   // Home navigation
-  if (cleanTranscript.includes('home') || cleanTranscript.includes('होम') || cleanTranscript === 'home') {
+  if (cleanTranscript.includes('home') || cleanTranscript.includes('होम')) {
     console.log('Navigating to home');
     window.location.href = '/';
     return true;
   }
   
   // Cart navigation
-  if (cleanTranscript.includes('cart') || cleanTranscript.includes('कार्ट') || cleanTranscript === 'cart') {
+  if (cleanTranscript.includes('cart') || cleanTranscript.includes('कार्ट')) {
     console.log('Navigating to cart');
     window.location.href = '/cart';
     return true;
@@ -24,10 +24,10 @@ export const handleNavigationCommands = (transcript: string) => {
     return true;
   }
 
-  // Global cancellation command
-  if (cleanTranscript.includes('cancel') || cleanTranscript.includes('रद्द') || cleanTranscript.includes('कैंसल')) {
-    console.log('Cancelling - going to cart');
-    window.location.href = '/cart';
+  // About page navigation
+  if (cleanTranscript.includes('about') || cleanTranscript.includes('अबाउट')) {
+    console.log('Navigating to about');
+    window.location.href = '/about';
     return true;
   }
 

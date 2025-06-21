@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MapPin } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { useAddressVoiceRecognition } from '@/hooks/useAddressVoiceRecognition';
 import SavedAddressList from './SavedAddressList';
 import VoiceInstructions from './VoiceInstructions';
 
@@ -35,15 +34,6 @@ const AddressStep: React.FC<AddressStepProps> = ({
   onSwitchToManual
 }) => {
   const { language } = useLanguage();
-
-  // Initialize voice recognition for address selection
-  useAddressVoiceRecognition({
-    voiceMode,
-    language,
-    selectedAddressIndex,
-    onAddressSelect,
-    onContinue
-  });
 
   return (
     <Card className="mb-6 shadow-lg border-gray-200">
