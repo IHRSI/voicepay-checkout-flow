@@ -13,20 +13,20 @@ export const handlePaymentMethodSelection = ({
       cleanTranscript === 'upi') {
     console.log('Selecting UPI');
     setPaymentMethod('UPI');
-    setTimeout(() => setCurrentStep(5), 1000);
+    setTimeout(() => setCurrentStep(5), 500);
     return true;
   } else if (cleanTranscript.includes('card') || cleanTranscript.includes('कार्ड') || 
              cleanTranscript === 'card') {
     console.log('Selecting Card');
     setPaymentMethod('Card');
-    setTimeout(() => setCurrentStep(5), 1000);
+    setTimeout(() => setCurrentStep(5), 500);
     return true;
   } else if (cleanTranscript.includes('cash') || cleanTranscript.includes('cod') || 
              cleanTranscript.includes('कैश') || cleanTranscript.includes('डिलीवरी पर भुगतान') ||
              cleanTranscript.includes('cash on delivery')) {
     console.log('Selecting Cash on Delivery');
     setPaymentMethod('Cash on Delivery');
-    setTimeout(() => setCurrentStep(5), 1000);
+    setTimeout(() => setCurrentStep(5), 500);
     return true;
   }
   return false;
@@ -59,7 +59,7 @@ export const handlePaymentDetails = ({
     if (upiMatch) {
       console.log('UPI address found:', upiMatch[0]);
       setPaymentDetails(prev => ({ ...prev, upiAddress: upiMatch[0] }));
-      setTimeout(() => setCurrentStep(6), 1000);
+      setTimeout(() => setCurrentStep(6), 500);
       return true;
     }
   } 
@@ -92,7 +92,7 @@ export const handlePaymentDetails = ({
       if (cvv.length === 3 || cvv.length === 4) {
         console.log('CVV saved, moving to OTP');
         setPaymentDetails(prev => ({ ...prev, cvv: cvv }));
-        setTimeout(() => setCurrentStep(6), 1000);
+        setTimeout(() => setCurrentStep(6), 500);
         return true;
       }
     }
@@ -103,10 +103,8 @@ export const handlePaymentDetails = ({
         cleanTranscript.includes('complete') || cleanTranscript.includes('पूरा') ||
         cleanTranscript === 'confirm') {
       console.log('Confirming COD order');
-      setTimeout(() => {
-        const event = new CustomEvent('completeOrder');
-        window.dispatchEvent(event);
-      }, 500);
+      const event = new CustomEvent('completeOrder');
+      window.dispatchEvent(event);
       return true;
     }
   }
@@ -136,10 +134,8 @@ export const handleOTPVerification = ({
       cleanTranscript.includes('complete') || cleanTranscript.includes('पूरा') ||
       cleanTranscript === 'confirm') {
     console.log('Confirming order with OTP');
-    setTimeout(() => {
-      const event = new CustomEvent('completeOrder');
-      window.dispatchEvent(event);
-    }, 500);
+    const event = new CustomEvent('completeOrder');
+    window.dispatchEvent(event);
     return true;
   }
   
