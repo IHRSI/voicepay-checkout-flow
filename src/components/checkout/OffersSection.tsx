@@ -26,7 +26,7 @@ const offers = [
     bgColor: 'from-purple-500 to-pink-500',
     textColor: 'text-purple-800',
     bgLight: 'bg-purple-50',
-    voiceCommand: ['voice', 'bonus', 'वॉयस', 'बोनस']
+    voiceCommand: ['voice', 'bonus', '1']
   },
   {
     id: 'UPI15',
@@ -39,7 +39,7 @@ const offers = [
     bgColor: 'from-green-500 to-emerald-500',
     textColor: 'text-green-800',
     bgLight: 'bg-green-50',
-    voiceCommand: ['upi', 'saver', 'यूपीआई', 'सेवर']
+    voiceCommand: ['upi', 'saver', '2']
   },
   {
     id: 'CARD10',
@@ -52,7 +52,7 @@ const offers = [
     bgColor: 'from-blue-500 to-cyan-500',
     textColor: 'text-blue-800',
     bgLight: 'bg-blue-50',
-    voiceCommand: ['card', 'payment', 'कार्ड', 'पेमेंट']
+    voiceCommand: ['card', 'payment', '3']
   },
   {
     id: 'FIRST5',
@@ -65,7 +65,7 @@ const offers = [
     bgColor: 'from-orange-500 to-red-500',
     textColor: 'text-orange-800',
     bgLight: 'bg-orange-50',
-    voiceCommand: ['first', 'special', 'पहला', 'स्पेशल']
+    voiceCommand: ['first', 'special', '4']
   }
 ];
 
@@ -79,98 +79,6 @@ const OffersSection: React.FC<OffersSectionProps> = ({
   const { language } = useLanguage();
   const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
   const [appliedOffer, setAppliedOffer] = useState<string | null>(null);
-  const [voiceRecognition, setVoiceRecognition] = useState<any>(null);
-
-  const speak = (text: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      window.speechSynthesis.speak(utterance);
-    }
-  };
-
-  useEffect(() => {
-    if (!voiceMode) return;
-
-    const timer = setTimeout(() => {
-      const instructionText = language === 'hi' 
-        ? 'यहाँ विशेष ऑफर हैं। ऑफर 1 वॉयस चेकआउट बोनस, ऑफर 2 UPI सुपर सेवर, ऑफर 3 कार्ड पेमेंट ऑफर, ऑफर 4 पहला ऑर्डर स्पेशल। कोई भी ऑफर चुनने के लिए "ऑफर 1", "ऑफर 2", "ऑफर 3", या "ऑफर 4" कहें। बिना ऑफर के आगे बढ़ने के लिए "continue" कहें।'
-        : 'Here are special offers. Offer 1 Voice Checkout Bonus, Offer 2 UPI Super Saver, Offer 3 Card Payment Offer, Offer 4 First Order Special. Say "offer 1", "offer 2", "offer 3", or "offer 4" to choose. Say "continue" to proceed without offers.';
-      speak(instructionText);
-    }, 500);
-
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
-
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript.toLowerCase().trim();
-        console.log('Offers transcript:', transcript);
-        
-        if (transcript.includes('continue') || transcript.includes('आगे') || transcript.includes('जारी')) {
-          speak(language === 'hi' ? 'भुगतान विधि पर जा रहे हैं।' : 'Proceeding to payment method.');
-          setTimeout(onContinue, 1000);
-          return;
-        }
-        
-        // Check for offer selection
-        if (transcript.includes('offer 1') || transcript.includes('ऑफर 1') || transcript.includes('1')) {
-          handleOfferSelect('VOICE20');
-        } else if (transcript.includes('offer 2') || transcript.includes('ऑफर 2') || transcript.includes('2')) {
-          handleOfferSelect('UPI15');
-        } else if (transcript.includes('offer 3') || transcript.includes('ऑफर 3') || transcript.includes('3')) {
-          handleOfferSelect('CARD10');
-        } else if (transcript.includes('offer 4') || transcript.includes('ऑफर 4') || transcript.includes('4')) {
-          handleOfferSelect('FIRST5');
-        } else {
-          speak(language === 'hi' ? 'कृपया ऑफर 1, 2, 3, या 4 कहें, या continue कहें।' : 'Please say offer 1, 2, 3, or 4, or say continue.');
-        }
-        
-        setTimeout(() => {
-          if (recognition) {
-            recognition.start();
-          }
-        }, 2000);
-      };
-
-      recognition.onerror = (event: any) => {
-        console.error('Offers recognition error:', event.error);
-        if (event.error !== 'aborted') {
-          setTimeout(() => {
-            if (recognition) {
-              recognition.start();
-            }
-          }, 1000);
-        }
-      };
-
-      recognition.onend = () => {
-        setTimeout(() => {
-          if (recognition) {
-            recognition.start();
-          }
-        }, 500);
-      };
-
-      setVoiceRecognition(recognition);
-      setTimeout(() => recognition.start(), 2000);
-    }
-
-    return () => {
-      clearTimeout(timer);
-      if (voiceRecognition) {
-        voiceRecognition.abort();
-      }
-      window.speechSynthesis.cancel();
-    };
-  }, [voiceMode, language, onContinue]);
 
   const handleOfferSelect = (offerId: string) => {
     const offer = offers.find(o => o.id === offerId);
@@ -181,12 +89,6 @@ const OffersSection: React.FC<OffersSectionProps> = ({
     
     const discount = (total * offer.discount) / 100;
     onOfferApplied(discount, offerId);
-
-    const confirmationText = language === 'hi' 
-      ? `${offer.titleHi} लागू किया गया! आपको ₹${discount.toFixed(0)} की छूट मिली। भुगतान विधि पर जाने के लिए continue कहें।`
-      : `${offer.title} applied! You saved ₹${discount.toFixed(0)}. Say continue to proceed to payment method.`;
-    
-    speak(confirmationText);
   };
 
   return (

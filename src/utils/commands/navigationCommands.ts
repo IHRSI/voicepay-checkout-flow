@@ -11,9 +11,11 @@ export const handleNavigationCommands = (transcript: string) => {
     return true;
   }
   
-  // Cart navigation
+  // Cart navigation - handle "card" as "cart" confusion
   if (cleanTranscript.includes('cart') || cleanTranscript.includes('कार्ट') || 
-      cleanTranscript.includes('shopping cart') || cleanTranscript.includes('my cart')) {
+      cleanTranscript.includes('shopping cart') || cleanTranscript.includes('my cart') ||
+      cleanTranscript.includes('card') || cleanTranscript.includes('shopping card') ||
+      cleanTranscript.includes('proceed to buy') || cleanTranscript.includes('buy now')) {
     console.log('Navigating to cart');
     window.location.href = '/cart';
     return true;

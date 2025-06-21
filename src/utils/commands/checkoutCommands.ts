@@ -57,11 +57,12 @@ export const handleAddressSelection = ({
   const cleanTranscript = transcript.toLowerCase().trim();
   console.log('Processing address selection:', cleanTranscript);
   
-  // Address 1 selection - case insensitive and more flexible
+  // Address 1 selection - completely case insensitive
   if (cleanTranscript.includes('address 1') || cleanTranscript.includes('address1') ||
       cleanTranscript.includes('पता 1') || cleanTranscript.includes('पता1') ||
       cleanTranscript.includes('first') || cleanTranscript.includes('पहला') || 
-      cleanTranscript === '1' || cleanTranscript === 'one' || cleanTranscript.includes('first address')) {
+      cleanTranscript === '1' || cleanTranscript === 'one' || 
+      cleanTranscript.includes('first address') || cleanTranscript.includes('पहला पता')) {
     console.log('Selecting address 1');
     setSelectedAddressIndex(0);
     setTimeout(() => setCurrentStep(3), 1000);
@@ -71,7 +72,8 @@ export const handleAddressSelection = ({
   else if (cleanTranscript.includes('address 2') || cleanTranscript.includes('address2') ||
            cleanTranscript.includes('पता 2') || cleanTranscript.includes('पता2') ||
            cleanTranscript.includes('second') || cleanTranscript.includes('दूसरा') || 
-           cleanTranscript === '2' || cleanTranscript === 'two' || cleanTranscript.includes('second address')) {
+           cleanTranscript === '2' || cleanTranscript === 'two' || 
+           cleanTranscript.includes('second address') || cleanTranscript.includes('दूसरा पता')) {
     console.log('Selecting address 2');
     setSelectedAddressIndex(1);
     setTimeout(() => setCurrentStep(3), 1000);
@@ -81,7 +83,8 @@ export const handleAddressSelection = ({
   else if (cleanTranscript.includes('address 3') || cleanTranscript.includes('address3') ||
            cleanTranscript.includes('पता 3') || cleanTranscript.includes('पता3') ||
            cleanTranscript.includes('third') || cleanTranscript.includes('तीसरा') || 
-           cleanTranscript === '3' || cleanTranscript === 'three' || cleanTranscript.includes('third address')) {
+           cleanTranscript === '3' || cleanTranscript === 'three' || 
+           cleanTranscript.includes('third address') || cleanTranscript.includes('तीसरा पता')) {
     console.log('Selecting address 3');
     setSelectedAddressIndex(2);
     setTimeout(() => setCurrentStep(3), 1000);
