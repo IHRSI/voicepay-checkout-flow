@@ -13,14 +13,12 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
   const { setLanguage } = useLanguage();
   const [isListening, setIsListening] = useState(false);
   const [hasSpoken, setHasSpoken] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
   const recognitionRef = useRef<any>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isProcessingRef = useRef(false);
-  const hasInitializedRef = useRef(false);
 
   const speak = (text: string, lang: string = 'en-US') => {
-    if ('speechSynthesis' in window && !isCompleted) {
+    if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang;
@@ -38,7 +36,6 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
   };
 
   const stopRecognition = () => {
-    console.log('Stopping language selector recognition');
     if (recognitionRef.current) {
       recognitionRef.current.abort();
       recognitionRef.current = null;
@@ -51,11 +48,10 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
   };
 
   const startVoiceRecognition = () => {
-    if (isProcessingRef.current || isCompleted || !('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    if (isProcessingRef.current || !('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       return;
     }
 
-    console.log('Starting language selector recognition');
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const rec = new SpeechRecognition();
     
@@ -69,25 +65,24 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
     };
     
     rec.onresult = (event: any) => {
-      if (isProcessingRef.current || isCompleted) return;
+      if (isProcessingRef.current) return;
       
       const transcript = event.results[0][0].transcript.toLowerCase().trim();
       console.log('Language selection transcript:', transcript);
       
       isProcessingRef.current = true;
-      stopRecognition();
       
       if (transcript.includes('english') || transcript.includes('इंग्लिश')) {
         handleLanguageSelect('en');
       } else if (transcript.includes('hindi') || transcript.includes('हिंदी')) {
         handleLanguageSelect('hi');
       } else {
-        console.log('Language not recognized, restarting...');
         isProcessingRef.current = false;
         speak("Please say English or Hindi clearly. कृपया English या Hindi स्पष्ट रूप से कहें।");
         
+        // Restart after feedback
         timeoutRef.current = setTimeout(() => {
-          if (!isProcessingRef.current && !isCompleted) {
+          if (!isProcessingRef.current) {
             startVoiceRecognition();
           }
         }, 3000);
@@ -98,9 +93,9 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
       console.log('Language selection error:', event.error);
       setIsListening(false);
       
-      if (event.error !== 'aborted' && !isProcessingRef.current && !isCompleted) {
+      if (event.error !== 'aborted' && !isProcessingRef.current) {
         timeoutRef.current = setTimeout(() => {
-          if (!isProcessingRef.current && !isCompleted) {
+          if (!isProcessingRef.current) {
             startVoiceRecognition();
           }
         }, 2000);
@@ -108,12 +103,11 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
     };
 
     rec.onend = () => {
-      console.log('Language selection ended');
       setIsListening(false);
       
-      if (!isProcessingRef.current && !isCompleted) {
+      if (!isProcessingRef.current) {
         timeoutRef.current = setTimeout(() => {
-          if (!isProcessingRef.current && !isCompleted) {
+          if (!isProcessingRef.current) {
             startVoiceRecognition();
           }
         }, 1500);
@@ -125,18 +119,14 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
   };
 
   useEffect(() => {
-    if (hasInitializedRef.current) return;
-    hasInitializedRef.current = true;
-
     const initializeVoice = async () => {
-      if (!hasSpoken && !isCompleted) {
+      if (!hasSpoken) {
         setHasSpoken(true);
         await speak("Welcome to VoicePay! Please choose your language. Say English for English or Hindi for Hindi. VoicePay में आपका स्वागत है! कृपया अपनी भाषा चुनें।");
         
+        // Start voice recognition after welcome message
         setTimeout(() => {
-          if (!isCompleted) {
-            startVoiceRecognition();
-          }
+          startVoiceRecognition();
         }, 1000);
       }
     };
@@ -144,15 +134,12 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
     initializeVoice();
 
     return () => {
-      console.log('Language selector cleanup');
       stopRecognition();
       window.speechSynthesis.cancel();
     };
   }, []);
 
   const handleLanguageSelect = async (lang: 'en' | 'hi') => {
-    console.log('Language selected:', lang);
-    setIsCompleted(true);
     stopRecognition();
     isProcessingRef.current = true;
     
@@ -165,9 +152,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
       await speak("Hindi चुनी गई! VoicePay में आपका स्वागत है। आपका शॉपिंग अनुभव शुरू हो रहा है।", 'hi-IN');
     }
     
-    // Ensure complete cleanup before proceeding
-    window.speechSynthesis.cancel();
-    setTimeout(onLanguageSelected, 1000);
+    setTimeout(onLanguageSelected, 2000);
   };
 
   return (
@@ -197,15 +182,13 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelected 
           <div className="space-y-4">
             <Button
               onClick={() => handleLanguageSelect('en')}
-              disabled={isCompleted}
-              className="w-full h-14 text-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+              className="w-full h-14 text-lg bg-blue-600 hover:bg-blue-700 text-white"
             >
               🇺🇸 English
             </Button>
             <Button
               onClick={() => handleLanguageSelect('hi')}
-              disabled={isCompleted}
-              className="w-full h-14 text-lg bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-50"
+              className="w-full h-14 text-lg bg-orange-600 hover:bg-orange-700 text-white"
             >
               🇮🇳 हिंदी (Hindi)
             </Button>
